@@ -201,7 +201,11 @@ async def answer_safety_check(transfer_id: str, answer: str, instructed: bool = 
     result = await task.run(payload)
     verdict: ScamScriptOutput = result.output
     decision, why = decide_after_check(
-        doc["assessment"]["score"], verdict, bool(doc["assessment"].get("mule_pattern")), instructed
+        doc["assessment"]["score"],
+        verdict,
+        bool(doc["assessment"].get("mule_pattern")),
+        instructed,
+        bool(doc["assessment"].get("coerced")),
     )
     doc["check"] = {
         "answer": answer,

@@ -427,12 +427,14 @@ function renderDetail() {
           : '<div class="muted">Проверочный диалог не проводился.</div>'}
       </div>
       <div class="box"><h5>Получатель — признаки дропа</h5>
-        ${r ? `<div class="kv"><span>Возраст счёта</span><b class="${r.account_age_days < 30 ? 'flag' : ''}">${r.account_age_days} дн.</b></div>
+        ${r ? (r.account_age_days === null ? `<div class="kv"><span>Возраст счёта, отправители, вывод</span><b class="muted">нет данных — другой банк</b></div>`
+          : `<div class="kv"><span>Возраст счёта</span><b class="${r.account_age_days < 30 ? 'flag' : ''}">${r.account_age_days} дн.</b></div>
           <div class="kv"><span>Разных отправителей за 24 ч</span><b class="${r.unique_senders_24h >= 10 ? 'flag' : ''}">${r.unique_senders_24h}</b></div>
-          <div class="kv"><span>Вывод средств за 24 ч</span><b class="${r.cash_out_ratio_24h >= 0.8 ? 'flag' : ''}">${Math.round(r.cash_out_ratio_24h * 100)}%</b></div>
-          <div class="kv"><span>В стоп-листе / базе АФЦ</span><b class="${(S.stoplist||[]).includes(r.id) || r.in_antifraud_db ? 'flag' : ''}">${(S.stoplist||[]).includes(r.id) ? 'да, стоп-лист банка' : r.in_antifraud_db ? 'да' : 'нет'}</b></div>
+          <div class="kv"><span>Вывод средств за 24 ч</span><b class="${r.cash_out_ratio_24h >= 0.8 ? 'flag' : ''}">${Math.round(r.cash_out_ratio_24h * 100)}%</b></div>`) + `
+          <div class="kv"><span>«Серый» список АФЦ</span><b class="${r.in_afc_graylist ? 'flag' : ''}">${r.in_afc_graylist ? 'да' : 'нет'}</b></div>
+          <div class="kv"><span>Стоп-лист банка / «чёрный» список АФЦ</span><b class="${(S.stoplist||[]).includes(r.id) || r.in_antifraud_db ? 'flag' : ''}">${(S.stoplist||[]).includes(r.id) ? 'да, стоп-лист банка' : r.in_antifraud_db ? 'да' : 'нет'}</b></div>
           ${a.mule_pattern ? '<div class="flag">Похож на дроп: задержка при любом ответе клиента</div>' : ''}
-          <div class="sim">${r.bank === 'Банк ЦентрКредит' ? 'Получатель — клиент BCC: в проде эти поля банк видит сам (core banking).' : 'Получатель в другом банке: в проде эти поля доступны только через межбанковый обмен с Антифрод-центром НБРК — это наше предложение для пилота. Без него решение держится на сессии, ответе клиента и чёрном списке.'} Здесь — симулятор.</div>` : ''}
+          <div class="sim">${r.bank === 'Банк ЦентрКредит' ? 'Получатель — клиент BCC: возраст счёта, отправителей и вывод банк видит сам (core banking).' : 'Получатель в другом банке: поведение его счёта BCC не видит. Есть только «серый» и «чёрный» списки АФЦ, сигналы сессии и ответ клиента. Межбанковый «индекс дропа» через АФЦ — наше предложение для пилота.'} Здесь — симулятор.</div>` : ''}
         <div class="kv"><span>Доверенное лицо</span><b class="${c.trusted_response === 'scam' ? 'flag' : ''}">${c.trusted_response === 'scam' ? 'считает, что мошенники' : c.trusted_response === 'ok' ? 'подтверждает перевод' : c.alert_id ? 'ещё не ответило' : 'нет'}</b></div>
       </div>
     </div>

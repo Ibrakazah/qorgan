@@ -37,10 +37,13 @@ class RecipientProfile(BaseModel):
     display_name: str = Field(description="Маскированное имя получателя, как в приложении.")
     account_masked: str
     bank: str
-    account_age_days: int
-    unique_senders_24h: int = Field(description="Сколько разных людей перевели на счёт за 24 ч.")
-    cash_out_ratio_24h: float = Field(ge=0, le=1, description="Доля входящих, ушедших со счёта за 24 ч.")
-    in_antifraud_db: bool = Field(default=False, description="Счёт уже в базе АФЦ / стоп-листе банка.")
+    # Behavioural stats are visible only for the bank's OWN accounts (core banking).
+    # For accounts in other banks they are None — unknown — unless an interbank exchange appears.
+    account_age_days: int | None = None
+    unique_senders_24h: int | None = Field(default=None, description="Сколько разных людей перевели на счёт за 24 ч.")
+    cash_out_ratio_24h: float | None = Field(default=None, ge=0, le=1, description="Доля входящих, ушедших за 24 ч.")
+    in_antifraud_db: bool = Field(default=False, description="Счёт в «чёрном» списке АФЦ (подтверждённый дроп).")
+    in_afc_graylist: bool = Field(default=False, description="Счёт в «сером» списке АФЦ (подозреваемый дроп).")
     prior_transfers_from_client: dict[str, int] = Field(
         default_factory=dict, description="client_id → сколько раз этот клиент уже переводил сюда."
     )
@@ -105,28 +108,26 @@ RECIPIENTS: Final[dict[str, RecipientProfile]] = {
         ),
         RecipientProfile(
             id="landlord", display_name="Марат Т. (арендодатель)", account_masked="KZ** **** 3380",
-            bank="Другой банк", account_age_days=2100, unique_senders_24h=1, cash_out_ratio_24h=0.0,
+            bank="Другой банк",
             prior_transfers_from_client={"erlan": 9},
         ),
         RecipientProfile(
-            id="mule", display_name="Арман К.", account_masked="KZ** **** 0587", bank="Другой банк",
+            id="mule", display_name="Арман К.", account_masked="KZ** **** 0587", bank="Банк ЦентрКредит",
             account_age_days=5, unique_senders_24h=43, cash_out_ratio_24h=0.97,
         ),
         RecipientProfile(
             id="olx_seller", display_name="Данияр С.", account_masked="KZ** **** 7765", bank="Другой банк",
-            account_age_days=19, unique_senders_24h=11, cash_out_ratio_24h=0.85,
+            in_afc_graylist=True,
         ),
         RecipientProfile(
             id="police_mule", display_name="Ербол Н.", account_masked="KZ** **** 3319", bank="Другой банк",
-            account_age_days=12, unique_senders_24h=27, cash_out_ratio_24h=0.92,
+            in_afc_graylist=True,
         ),
         RecipientProfile(
             id="relative_new", display_name="Асель Ж.", account_masked="KZ** **** 6624", bank="Другой банк",
-            account_age_days=400, unique_senders_24h=2, cash_out_ratio_24h=0.3,
         ),
         RecipientProfile(
             id="invest", display_name="ТОО «Капитал Трейд»", account_masked="KZ** **** 8841", bank="Другой банк",
-            account_age_days=41, unique_senders_24h=64, cash_out_ratio_24h=0.95,
         ),
         RecipientProfile(
             id="car_seller", display_name="Санжар М.", account_masked="KZ** **** 1290", bank="Банк ЦентрКредит",

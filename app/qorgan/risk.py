@@ -33,6 +33,9 @@ class RiskAssessment(BaseModel):
     score: int = Field(ge=0, le=100)
     level: Level
     reasons: list[Reason]
+    coerced: bool = Field(
+        default=False, description="Есть сигнал давления: звонок с незнакомого номера, оператор, удалённый доступ."
+    )
     mule_pattern: bool = Field(
         default=False,
         description="Получатель похож на дроп: в стоп-листе или набрал ≥ 30 баллов признаков дропа. "
@@ -122,21 +125,30 @@ def assess(
                 15,
                 f"Уже {recent_count} перевод(а) этому новому получателю за сутки, вместе с этим — {_fmt(total)}",
             )
-    if recipient.account_age_days < 30:
-        add("young_account", "recipient", 10, f"Счёт получателя открыт {recipient.account_age_days} дн. назад")
-    if recipient.unique_senders_24h >= 10:
+    if recipient.in_afc_graylist and not (recipient.in_antifraud_db or stoplisted):
+        add(
+            "recipient_graylisted",
+            "recipient",
+            25,
+            "Счёт получателя в «сером» списке Антифрод-центра (подозрение на дроп)",
+        )
+    # Behavioural markers: known only for the bank's own accounts (None = other bank, no data).
+    age, senders, cash_out = recipient.account_age_days, recipient.unique_senders_24h, recipient.cash_out_ratio_24h
+    if age is not None and age < 30:
+        add("young_account", "recipient", 10, f"Счёт получателя открыт {age} дн. назад")
+    if senders is not None and senders >= 10:
         add(
             "fan_in",
             "recipient",
             15,
-            f"На счёт получателя за сутки перевели {recipient.unique_senders_24h} разных людей",
+            f"На счёт получателя за сутки перевели {senders} разных людей",
         )
-    if recipient.cash_out_ratio_24h >= 0.8 and recipient.unique_senders_24h >= 3:
+    if cash_out is not None and senders is not None and cash_out >= 0.8 and senders >= 3:
         add(
             "fast_cash_out",
             "recipient",
             10,
-            f"Получатель сразу выводит деньги ({recipient.cash_out_ratio_24h:.0%} за сутки)",
+            f"Получатель сразу выводит деньги ({cash_out:.0%} за сутки)",
         )
 
     # --- History: trust earned by repeated normal transfers --------------------------------------
@@ -147,9 +159,13 @@ def assess(
 
     score = max(0, min(100, sum(r.points for r in reasons)))
     mule = sum(r.points for r in reasons if r.group == "recipient" and r.code != "new_recipient") >= MULE_POINTS
-    mule = mule or any(r.code == "recipient_blacklisted" for r in reasons)
+    mule = mule or any(r.code in ("recipient_blacklisted", "recipient_graylisted") for r in reasons)
     level: Level = "allow" if score < WARN_FROM else "warn" if score < CHECK_FROM else "safety_check"
     if mule:  # a mule recipient always gets the safety check, even for a small amount
         level = "safety_check"
+    codes = {r.code for r in reasons}
+    if {"new_recipient", "amount_spike", "drains_balance"} <= codes:
+        # most of the savings, far above habit, to someone new: always ask, even with no other signal
+        level = "safety_check"
     reasons.sort(key=lambda r: -r.points)
-    return RiskAssessment(score=score, level=level, reasons=reasons, mule_pattern=mule)
+    return RiskAssessment(score=score, level=level, reasons=reasons, mule_pattern=mule, coerced=coerced)

@@ -31,7 +31,7 @@ def _assess(client_id: str, recipient_id: str, amount: int, **session: Any) -> A
 @pytest.mark.parametrize(
     ("scenario", "level"),
     [("normal", "allow"), ("rent", "allow"), ("fake_security", "safety_check"), ("olx", "safety_check"),
-     ("call_active", "safety_check"), ("police", "safety_check"), ("relative_kz", "safety_check"), ("invest", "safety_check"), ("honest_big", "warn")],
+     ("call_active", "safety_check"), ("police", "safety_check"), ("relative_kz", "safety_check"), ("invest", "safety_check"), ("honest_big", "safety_check")],
 )  # fmt: skip
 def test_demo_scenarios_land_on_expected_level(scenario: str, level: str) -> None:
     s = SC[scenario]
@@ -180,9 +180,9 @@ def test_client_without_trusted_contact_gets_no_alert(api: TestClient) -> None:
 
 
 def test_innocent_answer_at_moderate_score_asks_confirmation(api: TestClient) -> None:
-    # Unknown caller + big amount to a normal (non-mule) recipient: score 70, safety check, no mule pattern.
+    # Most of the savings, far above habit, to a new normal recipient: asked, no mule, no coercion.
     body = {"client_id": "erlan", "recipient_id": "friend", "amount": 400_000,
-            "session": {"on_call": True, "caller_unknown": True}}  # fmt: skip
+            "session": {}}  # fmt: skip
     t = api.post("/api/transfers", json=body).json()
     assert t["status"] == "awaiting_answer" and not t["assessment"]["mule_pattern"]
     t = api.post(f"/api/transfers/{t['id']}/answer", json={"answer": "Оплачиваю ремонт, работы уже сделаны"}).json()
@@ -334,17 +334,27 @@ def test_every_scam_scenario_ends_held(api: TestClient, scenario: str) -> None:
     assert t["status"] == "held"
 
 
-@pytest.mark.parametrize("scenario", ["relative_kz", "invest"])
+def test_coached_lie_during_unknown_call_is_held(api: TestClient) -> None:
+    t = _send(api, "relative_kz")  # not a mule, but the client is on a call with an unknown number
+    t = api.post(f"/api/transfers/{t['id']}/answer", json={"answer": "Отдаю долг подруге за ремонт"}).json()
+    assert t["status"] == "held"
+
+
+@pytest.mark.parametrize("scenario", ["invest"])
 def test_ai_alone_decides_when_recipient_is_not_a_mule(api: TestClient, scenario: str) -> None:
     t = _send(api, scenario)
-    assert not t["assessment"]["mule_pattern"] and t["assessment"]["score"] < 80
+    assert not t["assessment"]["mule_pattern"] and not t["assessment"]["coerced"] and t["assessment"]["score"] < 80
     honest = api.post(f"/api/transfers/{t['id']}/answer", json={"answer": "Отдаю долг другу за ремонт"}).json()
     assert honest["status"] == "awaiting_confirmation"  # an innocent answer is not held
 
 
-def test_honest_big_purchase_only_warns(api: TestClient) -> None:
+def test_honest_big_purchase_is_asked_and_let_through(api: TestClient) -> None:
     t = _send(api, "honest_big")
-    assert t["status"] == "awaiting_confirmation" and t["assessment"]["level"] == "warn"
+    assert t["status"] == "awaiting_answer"
+    t = api.post(
+        f"/api/transfers/{t['id']}/answer", json={"answer": "Оплата за автомобиль у знакомого, договор подписали вчера"}
+    ).json()
+    assert t["status"] == "awaiting_confirmation"
     assert api.post(f"/api/transfers/{t['id']}/confirm").json()["status"] == "executed"
 
 
@@ -375,13 +385,13 @@ def test_splitting_into_small_transfers_is_caught(api: TestClient) -> None:
 
 
 def test_brush_off_answer_is_held(api: TestClient) -> None:
-    t = _send(api, "relative_kz")  # not a mule, score < 80: only the answer decides
+    t = _send(api, "invest")  # not a mule, no coercion signal: only the answer decides
     t = api.post(f"/api/transfers/{t['id']}/answer", json={"answer": "ok"}).json()
     assert t["status"] == "held"
 
 
 def test_someone_instructing_means_hold(api: TestClient) -> None:
-    t = _send(api, "relative_kz")
+    t = _send(api, "invest")
     body = {"answer": "Отдаю долг другу за ремонт", "someone_instructing": True}
     t = api.post(f"/api/transfers/{t['id']}/answer", json=body).json()
     assert t["status"] == "held"
@@ -410,3 +420,10 @@ def test_trusted_alert_keeps_banking_secrecy(api: TestClient) -> None:
 def test_amount_must_be_a_real_integer(api: TestClient, amount: object) -> None:
     body = {"client_id": "saule", "recipient_id": "grandson", "amount": amount}
     assert api.post("/api/transfers", json=body).status_code == 422
+
+
+def test_other_bank_recipient_has_no_invented_behaviour_data() -> None:
+    a = _assess("saule", "police_mule", 400_000)
+    codes = {r.code for r in a.reasons}
+    assert not codes & {"fan_in", "fast_cash_out", "young_account"}  # BCC cannot see another bank's account
+    assert "recipient_graylisted" in codes and a.mule_pattern  # the АФЦ gray list is what flags it
