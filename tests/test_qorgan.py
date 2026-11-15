@@ -31,7 +31,7 @@ def _assess(client_id: str, recipient_id: str, amount: int, **session: Any) -> A
 @pytest.mark.parametrize(
     ("scenario", "level"),
     [("normal", "allow"), ("rent", "allow"), ("fake_security", "safety_check"), ("olx", "safety_check"),
-     ("call_active", "safety_check")],
+     ("call_active", "safety_check"), ("police", "safety_check"), ("relative_kz", "safety_check"), ("invest", "safety_check"), ("honest_big", "warn")],
 )  # fmt: skip
 def test_demo_scenarios_land_on_expected_level(scenario: str, level: str) -> None:
     s = SC[scenario]
@@ -324,3 +324,25 @@ def test_broken_model_falls_back_to_rules(monkeypatch: pytest.MonkeyPatch) -> No
     )
     assert out.script == "fake_bank_security"
     assert out.analyst_note.startswith("Эвристика")
+
+
+@pytest.mark.parametrize("scenario", [s.id for s in SCENARIOS if s.suggested_answer])
+def test_every_scam_scenario_ends_held(api: TestClient, scenario: str) -> None:
+    t = _send(api, scenario)
+    assert t["status"] == "awaiting_answer"
+    t = api.post(f"/api/transfers/{t['id']}/answer", json={"answer": SC[scenario].suggested_answer}).json()
+    assert t["status"] == "held"
+
+
+@pytest.mark.parametrize("scenario", ["relative_kz", "invest"])
+def test_ai_alone_decides_when_recipient_is_not_a_mule(api: TestClient, scenario: str) -> None:
+    t = _send(api, scenario)
+    assert not t["assessment"]["mule_pattern"] and t["assessment"]["score"] < 80
+    honest = api.post(f"/api/transfers/{t['id']}/answer", json={"answer": "Отдаю долг другу за ремонт"}).json()
+    assert honest["status"] == "awaiting_confirmation"  # an innocent answer is not held
+
+
+def test_honest_big_purchase_only_warns(api: TestClient) -> None:
+    t = _send(api, "honest_big")
+    assert t["status"] == "awaiting_confirmation" and t["assessment"]["level"] == "warn"
+    assert api.post(f"/api/transfers/{t['id']}/confirm").json()["status"] == "executed"

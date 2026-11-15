@@ -396,7 +396,7 @@ function renderDetail() {
           <div class="kv"><span>Уверенность</span><b>${Math.round(ch.verdict.confidence * 100)}%</b></div>
           ${ch.verdict.signals.length ? `<div>Признаки: ${ch.verdict.signals.map(esc).join('; ')}</div>` : ''}
           <div class="muted">${esc(ch.verdict.analyst_note)}</div>
-          <div class="muted">Источник: ${ch.source === 'llm' ? 'LLM' : ch.source === 'cache' ? 'LLM (кэш)' : ch.source === 'mock' ? 'офлайн-эвристика (mock)' : 'эвристика (LLM недоступна)'} · решение: ${esc(ch.decision_reason)}</div>`
+          <div class="muted">Источник: ${ch.source === 'llm' ? 'LLM' : ch.source === 'cache' ? 'LLM (кэш)' : ch.source === 'mock' ? 'офлайн-классификатор (без LLM)' : 'офлайн-классификатор (LLM недоступна)'} · решение: ${esc(ch.decision_reason)}</div>`
           : '<div class="muted">Проверочный диалог не проводился.</div>'}
       </div>
       <div class="box"><h5>Получатель — признаки дропа</h5>
@@ -451,9 +451,9 @@ function tick() { const t = new Date().toLocaleTimeString('ru-RU', {hour: '2-dig
   try {
     S.state = await api('/api/demo/state');
     const b = $('#aiBadge');
-    b.textContent = S.state.ai_mode === 'llm' ? 'ИИ: LLM' : 'ИИ: офлайн (MOCK)';
+    b.textContent = S.state.ai_mode === 'llm' ? 'ИИ: LLM' : 'ИИ: офлайн-классификатор';
     b.className = 'badge ' + (S.state.ai_mode === 'llm' ? 'llm' : 'mock');
-    b.title = S.state.ai_mode === 'llm' ? 'Ответы клиента анализирует языковая модель' : 'Ключа LLM нет: работает офлайн-эвристика';
+    b.title = S.state.ai_mode === 'llm' ? 'Ответы клиента анализирует языковая модель' : 'Ключа LLM нет: работает офлайн-классификатор (n-граммы + правила), без интернета';
     applyScenario(S.state.scenarios[0].id);
     await refresh();
     setInterval(refresh, 2500); tick(); setInterval(tick, 15000);

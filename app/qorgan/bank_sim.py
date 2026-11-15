@@ -115,6 +115,22 @@ RECIPIENTS: Final[dict[str, RecipientProfile]] = {
             account_age_days=19, unique_senders_24h=11, cash_out_ratio_24h=0.85,
         ),
         RecipientProfile(
+            id="police_mule", display_name="Ербол Н.", account_masked="KZ** **** 3319", bank="Другой банк",
+            account_age_days=12, unique_senders_24h=27, cash_out_ratio_24h=0.92,
+        ),
+        RecipientProfile(
+            id="relative_new", display_name="Асель Ж.", account_masked="KZ** **** 6624", bank="Другой банк",
+            account_age_days=400, unique_senders_24h=2, cash_out_ratio_24h=0.3,
+        ),
+        RecipientProfile(
+            id="invest", display_name="ТОО «Капитал Трейд»", account_masked="KZ** **** 8841", bank="Другой банк",
+            account_age_days=41, unique_senders_24h=64, cash_out_ratio_24h=0.95,
+        ),
+        RecipientProfile(
+            id="car_seller", display_name="Санжар М.", account_masked="KZ** **** 1290", bank="Банк ЦентрКредит",
+            account_age_days=2900, unique_senders_24h=1, cash_out_ratio_24h=0.0,
+        ),
+        RecipientProfile(
             id="friend", display_name="Тимур Б.", account_masked="KZ** **** 2210", bank="Банк ЦентрКредит",
             account_age_days=900, unique_senders_24h=1, cash_out_ratio_24h=0.05,
         ),
@@ -168,6 +184,40 @@ SCENARIOS: Final[tuple[Scenario, ...]] = (
         title="5. Аренда — крупно, но привычно",
         story="Ерлан, как каждый месяц, платит арендодателю 200 000 ₸.",
         client_id="erlan", recipient_id="landlord", amount=200_000, purpose="Аренда за декабрь",
+        session=SessionSignals(),
+    ),
+    Scenario(
+        id="police",
+        title="6. «Следователь» и «секретная операция»",
+        story="Сауле звонит «следователь»: банк в сговоре с мошенниками, нужно помочь операции и перевести 400 000 ₸.",
+        client_id="saule", recipient_id="police_mule", amount=400_000, purpose="Перевод",
+        session=SessionSignals(),
+        suggested_answer="Следователь сказал что идёт операция по поимке мошенников в банке, надо перевести деньги на проверку, иначе будет уголовное дело",
+    ),
+    Scenario(
+        id="relative_kz",
+        title="7. «Ұлым апатқа түсті» — ответ на казахском",
+        story=(
+            "Сауле звонят с незнакомого номера: «сын попал в аварию». Получатель — обычный счёт, не дроп. "
+            "Задержку решает только ответ клиента."
+        ),
+        client_id="saule", recipient_id="relative_new", amount=300_000, purpose="",
+        session=SessionSignals(on_call=True, caller_unknown=True, call_minutes=6),
+        suggested_answer="Ұлым жаңа нөмірден хабарласты, апатқа түсіпті, тез арада ақша керек деді",
+    ),
+    Scenario(
+        id="invest",
+        title="8. «Личный менеджер» и 20% в неделю",
+        story="Ерлан «инвестирует» через Telegram. Чтобы вывести «прибыль», менеджер просит пополнить счёт на 500 000 ₸.",
+        client_id="erlan", recipient_id="invest", amount=500_000, purpose="Пополнение счёта",
+        session=SessionSignals(),
+        suggested_answer="Менеджер с платформы сказал пополнить счёт, чтобы вывести прибыль, обещают 20% в неделю",
+    ),
+    Scenario(
+        id="honest_big",
+        title="9. Честная покупка машины",
+        story="Ерлан покупает машину у знакомого и переводит 400 000 ₸ впервые. Крупно и непривычно, но без признаков обмана.",
+        client_id="erlan", recipient_id="car_seller", amount=400_000, purpose="Оплата за автомобиль, договор от 14.11",
         session=SessionSignals(),
     ),
 )  # fmt: skip

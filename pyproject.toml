@@ -33,3 +33,5 @@ ignore_missing_imports = true
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/record_demo.py" = ["E501"]  # on-screen captions are long prose by design
+"app/qorgan/bank_sim.py" = ["E501"]  # synthetic demo stories are prose
+"tests/test_qorgan.py" = ["E501"]  # parametrize tables

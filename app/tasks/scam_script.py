@@ -305,7 +305,7 @@ def classify_heuristically(payload: ScamScriptInput) -> ScamScriptOutput:
         script=label,
         confidence=round(1 - p_none, 2),
         signals=rules.signals,
-        analyst_note=f"Офлайн-классификатор: «{SCRIPT_TITLES[label]}» "
+        analyst_note=f"Офлайн-классификатор: {SCRIPT_TITLES[label]} "
         f"(P = {probs[label]:.0%}, вероятность мошенничества {1 - p_none:.0%}).",
     )
 

@@ -149,7 +149,7 @@ def evaluate(task: AnyTask, dataset: Path, predictions: list[Prediction], target
         task=task.name,
         dataset=dataset,
         target=target,
-        mode="MOCK (эвристика, без LLM)" if get_llm().mock else f"LLM ({settings.llm_provider})",
+        mode="без LLM: офлайн-фолбэк задачи" if get_llm().mock else f"LLM ({settings.llm_provider})",
         model=task.model,
         predictions=predictions,
         report=classification_report(y_true, y_pred),
