@@ -200,17 +200,17 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
   <div class="case"><span>ITU HACKATHON-2026</span><span>FINTECH CASE · БАНК ЦЕНТРКРЕДИТ</span><span>КОМАНДА [НАЗВАНИЕ]</span></div>
   <div class="brand"><div class="w">Qorgan</div><div class="kz">қорған — защита</div></div>
   <div class="amount">850 000<span class="t">₸</span></div>
-  <p class="after">Столько Сауле, 67 лет, чуть не перевела «службе безопасности банка». <b>Qorgan остановил перевод — и не помешал ни одному обычному.</b></p>
+  <p class="after">Столько в нашем демо Сауле, 67 лет, переводит «службе безопасности банка». <b>Qorgan останавливает этот перевод — а перевод внуку пропускает без вопросов.</b></p>
   <svg class="mark" viewBox="0 0 100 116" fill="none" stroke="#EEEAE1" stroke-width="5"><path d="M50 4 6 20v32c0 30 19 53 44 60 25-7 44-30 44-60V20z"/><path d="M50 4v108" stroke-dasharray="6 7"/></svg>
-  <div class="folio"><span>01</span><span>Демо и материалы — в репозитории</span></div>
+  <div class="folio"><span>01</span><span>Сауле и её счёт — персонаж демо, данные синтетические</span></div>
 </section>
 
 <!-- 2 -->
 <section class="slide">
   <div class="kicker">Проблема</div>
-  <h2>Мошенник не взламывает банк. Он уговаривает человека.</h2>
+  <h2>Мошенник не взламывает банк. Он взламывает человека.</h2>
   <div class="call">
-    <div class="log">
+    <div class="log" title="типичный сценарий звонка — реконструкция для демо">
       <div class="row"><span class="ts">14:02</span><span>«Здравствуйте, служба безопасности банка…»</span></div>
       <div class="row"><span class="ts">14:09</span><span>«На вас оформляют кредит. Деньги нужно спасти».</span></div>
       <div class="row"><span class="ts">14:17</span><span>«Не кладите трубку. Никому не говорите».</span></div>
@@ -227,15 +227,15 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
   <div class="stats">
     <div><div class="n">28 900</div><div class="l">дел об интернет-мошенничестве в 2025 — рекорд</div><div class="src">Kapital.kz, 21.08.2026</div></div>
     <div><div class="n">№ 1</div><div class="l">схема — звонки и SMS «от имени банка»</div><div class="src">finprom.kz, январь–июль 2026</div></div>
-    <div><div class="n">98%</div><div class="l">жертв сами отдали деньги и данные</div><div class="src">МВД РК, 2024</div></div>
+    <div><div class="n">98%</div><div class="l">жертв сами передали мошенникам свои данные</div><div class="src">МВД РК о 2024 годе, Finratings.kz</div></div>
   </div>
-  <div class="folio"><span>02</span><span>Источники: docs/research/RESEARCH.md</span></div>
+  <div class="folio"><span>02</span><span>Хронология звонка — типичный сценарий для демо. Цифры: docs/research/RESEARCH.md</span></div>
 </section>
 
 <!-- 3 -->
 <section class="slide">
   <div class="kicker">Почему этого мало</div>
-  <h2>Переводы во время звонка уже блокируют. Мошенники взяли второй телефон.</h2>
+  <h2>Переводы во время звонка уже блокируют. Мошенники берут второй телефон.</h2>
   <div class="phones">
     <div>
       <div class="ph">
@@ -252,7 +252,7 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
         <div class="cam"></div>
         <div class="big">«Служба безопасности»</div>
       </div>
-      <div class="cap">телефон № 2 — схема, о которой АРРФР предупреждал в августе 2026</div>
+      <div class="cap">телефон № 2 — такую схему описывали в августе 2026 (Finratings.kz)</div>
     </div>
     <div class="defs">
       <div class="d"><div class="h"><span class="strike">Блок при звонке</span></div><div class="b">видит звонок только на этом же телефоне</div></div>
@@ -260,7 +260,7 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
       <div class="d"><div class="h"><span class="strike">«Блок или пропуск»</span></div><div class="b">либо пропускает обман, либо злит честных клиентов</div></div>
     </div>
   </div>
-  <div class="folio"><span>03</span><span>Требование о блокировке — по сообщениям СМИ, ноябрь 2025</span></div>
+  <div class="folio"><span>03</span><span>Требование о блокировке известно из СМИ (ноябрь 2025), текст акта мы не нашли</span></div>
 </section>
 
 <!-- 4 -->
@@ -313,12 +313,12 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
   <div class="kicker">ИИ — там, где правила бессильны</div>
   <h2 style="color:var(--paper)">Один вопрос: «Зачем вы переводите?»</h2>
   <p class="quote">«Позвонил сотрудник <mark>службы безопасности банка</mark>, сказал, что на меня <mark>оформляют кредит</mark>. Надо срочно перевести деньги на <mark>безопасный счёт</mark> и <mark>никому не говорить</mark>».</p>
-  <div class="verdictline"><span>языковая модель, RU/KZ</span><span class="arrow">→</span><span class="v">СЛУЖБА БЕЗОПАСНОСТИ · 95%</span><span class="arrow">→</span><span>перевод ждёт специалиста</span></div>
+  <div class="verdictline"><span>офлайн-классификатор демо</span><span class="arrow">→</span><span class="v">СЛУЖБА БЕЗОПАСНОСТИ · 98%</span><span class="arrow">→</span><span>перевод ждёт специалиста</span></div>
   <div class="lie">
     <div><div class="q">А если она соврёт: «маме на лекарства»?</div><div class="a">Получатель — дроп. Перевод всё равно ждёт человека. Ответ клиента может только добавить подозрение.</div></div>
     <div><div class="q">А если модель ошибётся?</div><div class="a">Решение о деньгах принимает код, а не модель. Выпустить задержанный перевод может только аналитик.</div></div>
   </div>
-  <div class="folio"><span>06</span><span>Без ключа и сети работает офлайн-классификатор — демо не зависит от интернета</span></div>
+  <div class="folio"><span>06</span><span>В демо работает офлайн-классификатор. Режим с языковой моделью написан, но не измерен: нужен ключ API</span></div>
 </section>
 
 <!-- 7 -->
@@ -327,11 +327,11 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
   <h2>Одна минута, три человека.</h2>
   <div class="shots">
     <div class="shot"><div class="frame dk"><img src="../../media/shot_client_held.png"></div>
-      <div class="ts">14:27:05</div><div class="who">Сауле</div><div class="what">Перевод задержан. Понятное объяснение схемы, совет положить трубку.</div></div>
+      <div class="ts">в демо</div><div class="who">Сауле</div><div class="what">Перевод задержан. Понятное объяснение схемы, совет положить трубку.</div></div>
     <div class="shot"><div class="frame dk"><img src="../../media/shot_trusted_alert.png" style="object-position:center 72%"></div>
-      <div class="ts">14:27:06</div><div class="who">Айгерим, дочь</div><div class="what">«Маме, возможно, звонят мошенники». Без доступа к счёту.</div></div>
+      <div class="ts">в ту же секунду</div><div class="who">Айгерим, дочь</div><div class="what">«Маме, возможно, звонят мошенники». Без доступа к счёту.</div></div>
     <div class="shot"><div class="frame"><img src="../../media/shot_analyst_case.png" style="object-position:left top"></div>
-      <div class="ts">14:28</div><div class="who">Аналитик банка</div><div class="what">Причины балла, ответ клиента, профиль дропа. Отклонить — получатель в стоп-листе.</div></div>
+      <div class="ts">сразу в очереди</div><div class="who">Аналитик банка</div><div class="what">Причины балла, ответ клиента, профиль дропа. Отклонить — получатель в стоп-листе.</div></div>
   </div>
   <div class="folio"><span>07</span><span>Живое демо — следующие 3 минуты</span></div>
 </section>
@@ -342,14 +342,14 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
   <h2>Отдельные элементы уже есть. Мы собираем их в один поток.</h2>
   <table class="mx">
     <tr><th></th><th>Блок при звонке<br>АРРФР</th><th>Доверенный контакт<br>Kaspi</th><th>ИИ-звонок<br>инициатива НБРК</th><th>BioCatch,<br>Feedzai</th><th class="us">Qorgan</th></tr>
-    <tr><td>Ловит обход через второй телефон</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot h"></span></td><td><span class="dot h"></span></td><td class="us"><span class="dot f"></span></td></tr>
-    <tr><td>Соразмерное вмешательство</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot f"></span></td><td class="us"><span class="dot f"></span></td></tr>
+    <tr><td>Ловит обход через второй телефон</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot h"></span></td><td class="us"><span class="dot f"></span></td></tr>
+    <tr><td>Соразмерное вмешательство</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot h"></span></td><td class="us"><span class="dot f"></span></td></tr>
     <tr><td>Дроп до чёрного списка</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot f"></span></td><td class="us"><span class="dot f"></span></td></tr>
-    <tr><td>Понимает ответ клиента</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot f"></span></td><td><span class="dot"></span></td><td class="us"><span class="dot f"></span></td></tr>
-    <tr><td>Объясняет близким, что случилось</td><td><span class="dot"></span></td><td><span class="dot h"></span></td><td><span class="dot"></span></td><td><span class="dot"></span></td><td class="us"><span class="dot f"></span></td></tr>
-    <tr><td>Готовый кейс для аналитика и АФЦ</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot f"></span></td><td class="us"><span class="dot f"></span></td></tr>
+    <tr><td>Понимает ответ клиента</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot h"></span></td><td><span class="dot"></span></td><td class="us"><span class="dot f"></span></td></tr>
+    <tr><td>Объясняет близким, что случилось</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot"></span></td><td class="us"><span class="dot f"></span></td></tr>
+    <tr><td>Готовый кейс для аналитика и АФЦ</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot h"></span></td><td class="us"><span class="dot f"></span></td></tr>
   </table>
-  <div class="legend"><span><span class="dot f"></span>&nbsp; есть</span><span><span class="dot h"></span>&nbsp; частично / голосом</span><span><span class="dot"></span>&nbsp; в открытых описаниях не найдено</span><span>по открытым источникам на 15.11.2026</span></div>
+  <div class="legend"><span><span class="dot f"></span>&nbsp; есть</span><span><span class="dot h"></span>&nbsp; частично, голосом или не проверено</span><span><span class="dot"></span>&nbsp; в открытых описаниях не найдено</span><span>по открытым источникам на 15.11.2026</span></div>
   <div class="folio"><span>08</span><span>Т-Банк ловит мошенника в разговоре — но только на SIM своего оператора</span></div>
 </section>
 
@@ -364,7 +364,7 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
       <ul>
         <li><b>Сквозной сценарий</b> трёх ролей, 9 демо-случаев, сброс одной кнопкой</li>
         <li><b>REST API</b> с OpenAPI — встраивается в платёжный поток</li>
-        <li><b>ИИ проверен на чужих ответах:</b> ловит 87% схем, одни правила — 61% (112 ответов, автор не видел правил)</li>
+        <li><b>ИИ проверен на отдельном наборе:</b> ловит 87% схем, одни правила — 61%. 112 синтетических ответов, их писал отдельный ИИ-агент без доступа к нашим правилам</li>
         <li><b>93 автотеста</b>, из них 63 — логика Qorgan</li>
         <li><b>Без интернета:</b> офлайн-классификатор, ни одного CDN</li>
       </ul>
@@ -388,7 +388,7 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
   <h2>Сколько это может сохранить — и сколько стоит.</h2>
   <div class="formula">L × s × c × p</div>
   <div class="vars">
-    <div><b>35 млрд ₸</b>потери в РК за год (МВД: 45 млрд в 2024, минус тренд 2026)</div>
+    <div><b>35 млрд ₸</b>потери в РК за год — допущение: 45 млрд в 2024 (МВД) минус тренд 2026</div>
     <div><b>10%</b>доля BCC — допущение</div>
     <div><b>50%</b>идёт через переводы в приложении — допущение</div>
     <div><b>p</b>доля остановленных — цель пилота</div>
@@ -397,7 +397,7 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
     <div><div class="n">175</div><div class="l">млн ₸ в год при p = 10%</div></div>
     <div><div class="n">437</div><div class="l">млн ₸ при p = 25%</div></div>
     <div><div class="n">700</div><div class="l">млн ₸ при p = 40%</div></div>
-    <div class="cost"><div class="n green">43&nbsp;000&nbsp;₸</div><div class="l">в месяц на ИИ: модель спрашивают только про подозрительные переводы (1%)</div></div>
+    <div class="cost"><div class="n green">43&nbsp;000&nbsp;₸</div><div class="l">в месяц на ИИ, если модель спрашивать только про 1% переводов — оба числа допущения</div></div>
   </div>
   <div class="folio"><span>10</span><span>Это оценка, не измерение. Формулы: docs/submission/ECONOMICS.md</span></div>
 </section>
