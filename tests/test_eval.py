@@ -8,7 +8,7 @@ import pytest
 from evals.metrics import ERROR_LABEL, binary_report, classification_report, percentile
 from evals.run_eval import main, run_eval
 
-DATASET = Path(__file__).parents[1] / "evals" / "datasets" / "scam_script.jsonl"
+DATASET = Path(__file__).parents[1] / "evals" / "datasets" / "scam_script_test.jsonl"
 
 
 def test_classification_report_matches_hand_computation() -> None:

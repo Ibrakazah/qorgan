@@ -10,9 +10,12 @@ Sections: 1) schemas  2) prompt  3) keyword heuristic (mock mode / LLM outage)  
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
-from typing import Final, Literal
+from functools import lru_cache
+from pathlib import Path
+from typing import Any, Final, Literal
 
 from pydantic import BaseModel, Field
 
@@ -215,7 +218,8 @@ _PRESSURE: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
 )  # fmt: skip
 
 
-def classify_heuristically(payload: ScamScriptInput) -> ScamScriptOutput:
+def classify_rules(payload: ScamScriptInput) -> ScamScriptOutput:
+    """Hand-written keyword rules: high precision on classic wording, blind to paraphrases."""
     text = f"{payload.answer}\n{payload.transfer_purpose or ''}".lower().replace("ё", "е")
     scores = {rule.script: sum(bool(p.search(text)) for p in rule.patterns) for rule in _SCRIPT_RULES}
     signals = [label for pattern, label in _PRESSURE if pattern.search(text)]
@@ -239,6 +243,70 @@ def classify_heuristically(payload: ScamScriptInput) -> ScamScriptOutput:
         confidence=0.6,
         signals=signals,
         analyst_note="Эвристика (без LLM): признаков известного сценария не найдено.",
+    )
+
+
+# ---------------------------------------------------------------------------------------------
+# 3b. Offline classifier: char n-gram TF-IDF + logistic regression, rules as a fallback
+# ---------------------------------------------------------------------------------------------
+# Trained at first use on app/tasks/data/scam_train.jsonl (hand-written, labelled answers; ~150).
+# Char n-grams survive typos, Kazakh suffixes and transliteration better than keyword rules.
+# Hyper-parameters were chosen by 5-fold cross-validation on the training set only; quality is
+# reported on the separate held-out set evals/datasets/scam_script_test.jsonl written by another author.
+
+TRAIN_PATH: Final = Path(__file__).parent / "data" / "scam_train.jsonl"
+MODEL_C: Final = 10.0
+MODEL_MIN_PROB: Final = 0.3  # below this the model is unsure and the rules decide
+
+
+@lru_cache(maxsize=1)
+def _model() -> tuple[Any, Any]:
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.linear_model import LogisticRegression
+
+    rows = [json.loads(line) for line in TRAIN_PATH.read_text(encoding="utf-8").splitlines() if line.strip()]
+    texts = [_norm(r["input"]["answer"]) for r in rows]
+    labels = [r["expected"]["script"] for r in rows]
+    vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 5), sublinear_tf=True)
+    model = LogisticRegression(C=MODEL_C, max_iter=3000, class_weight="balanced")
+    model.fit(vectorizer.fit_transform(texts), labels)
+    return vectorizer, model
+
+
+def _norm(text: str) -> str:
+    return text.lower().replace("ё", "е")
+
+
+def classify_heuristically(payload: ScamScriptInput) -> ScamScriptOutput:
+    """Offline verdict (mock mode and LLM outages): the n-gram model first, rules when it is unsure.
+
+    confidence = probability that this is *some* scam script (1 − P(none)) for a scam verdict, and
+    P(none) for a «none» verdict — that is the quantity the hold decision actually depends on.
+    """
+    rules = classify_rules(payload)
+    try:
+        vectorizer, model = _model()
+    except Exception:  # sklearn missing or training file broken: rules still protect the client
+        return rules
+    text = _norm(f"{payload.answer} {payload.transfer_purpose or ''}")
+    probs = dict(zip(model.classes_, model.predict_proba(vectorizer.transform([text]))[0], strict=True))
+    label = max(probs, key=lambda k: probs[k])
+    if probs[label] < MODEL_MIN_PROB:
+        return rules
+    p_none = float(probs.get("none", 0.0))
+    if label == "none":
+        return ScamScriptOutput(
+            script="none",
+            confidence=round(p_none, 2),
+            signals=rules.signals,
+            analyst_note=f"Офлайн-классификатор: похоже на обычный перевод (P = {p_none:.0%}).",
+        )
+    return ScamScriptOutput(
+        script=label,
+        confidence=round(1 - p_none, 2),
+        signals=rules.signals,
+        analyst_note=f"Офлайн-классификатор: «{SCRIPT_TITLES[label]}» "
+        f"(P = {probs[label]:.0%}, вероятность мошенничества {1 - p_none:.0%}).",
     )
 
 
@@ -286,7 +354,7 @@ class ScamScriptTask(Task[ScamScriptInput, ScamScriptOutput]):
     def postprocess(self, payload: ScamScriptInput, output: ScamScriptOutput) -> ScamScriptOutput:
         # A "none" verdict cannot carry high confidence when hard pressure markers are present:
         # the model may have been talked into it by the client's text (prompt injection).
-        hard = classify_heuristically(payload)
+        hard = classify_rules(payload)
         weak = output.script == "none" or output.confidence < 0.6
         if weak and hard.script != "none" and hard.confidence >= 0.7:
             return hard.model_copy(

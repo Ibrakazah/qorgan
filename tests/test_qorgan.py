@@ -285,3 +285,42 @@ def test_reset_is_reproducible(api: TestClient) -> None:
     second = api.post("/api/demo/reset").json()
     assert first == second
     assert second["synthetic_history"] == second["transfers_total"] == 40
+
+
+# --- offline classifier (n-gram model + rules) ------------------------------------------------------
+
+
+def _accuracy(fn: Any) -> float:
+    import json
+
+    path = Path(__file__).parents[1] / "evals" / "datasets" / "scam_script_test.jsonl"
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    hits: int = sum(fn(ScamScriptInput(**r["input"])).script == r["expected"]["script"] for r in rows)
+    return float(hits) / len(rows)
+
+
+def test_offline_classifier_beats_rules_on_heldout_set() -> None:
+    from app.tasks.scam_script import classify_rules
+
+    hybrid, rules = _accuracy(classify_heuristically), _accuracy(classify_rules)
+    assert hybrid >= 0.8  # measured 0.84 when frozen; guards against silent regressions
+    assert hybrid > rules + 0.1
+
+
+def test_classifier_reads_transliteration() -> None:
+    out = classify_heuristically(ScamScriptInput(answer="zvonili iz banka, skazali perevesti na bezopasnyi schet"))
+    assert out.script == "fake_bank_security"
+
+
+def test_broken_model_falls_back_to_rules(monkeypatch: pytest.MonkeyPatch) -> None:
+    import app.tasks.scam_script as mod
+
+    def boom() -> None:
+        raise RuntimeError("no sklearn")
+
+    monkeypatch.setattr(mod, "_model", boom)
+    out = mod.classify_heuristically(
+        ScamScriptInput(answer="Звонил сотрудник службы безопасности банка, безопасный счёт")
+    )
+    assert out.script == "fake_bank_security"
+    assert out.analyst_note.startswith("Эвристика")

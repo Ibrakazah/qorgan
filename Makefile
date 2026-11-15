@@ -5,7 +5,7 @@ VENV    ?= .venv
 BIN     := $(VENV)/bin
 PORT    ?= 8000
 TASK    ?= scam_script
-DATASET ?= evals/datasets/scam_script.jsonl
+DATASET ?= evals/datasets/scam_script_test.jsonl
 ARGS    ?=
 
 .DEFAULT_GOAL := help
