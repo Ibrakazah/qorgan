@@ -225,7 +225,7 @@ def classify_heuristically(payload: ScamScriptInput) -> ScamScriptOutput:
     strong = best_score >= 2 or (best_score == 1 and (signals or payload.on_call))
     if strong:
         confidence = min(0.95, 0.45 + 0.15 * best_score + 0.05 * len(signals))
-        note = f"Эвристика (без LLM): совпало {best_score} признака сценария «{SCRIPT_TITLES[best]}»."
+        note = f"Эвристика (без LLM): совпало признаков сценария — {best_score}: {SCRIPT_TITLES[best]}."
         return ScamScriptOutput(script=best, confidence=round(confidence, 2), signals=signals, analyst_note=note)
     if len(signals) >= 2 or (signals and payload.on_call):
         return ScamScriptOutput(

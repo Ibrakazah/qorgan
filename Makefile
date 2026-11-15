@@ -11,7 +11,7 @@ TARGET  ?= is_bot
 ARGS    ?=
 
 .DEFAULT_GOAL := help
-.PHONY: help install dev test lint typecheck check eval ml sample-data smoke docker clean
+.PHONY: help install demo record deck dev test lint typecheck check eval ml sample-data smoke docker clean
 
 help: ## list targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-12s %s\n", $$1, $$2}'
@@ -24,6 +24,15 @@ $(BIN)/python:
 install: $(BIN)/python ## create .venv and install runtime + ML + dev dependencies
 	$(BIN)/python -m pip install --upgrade pip
 	$(BIN)/python -m pip install -r requirements-dev.txt
+
+demo: ## run Qorgan for the live demo on PORT (no auto-reload): http://localhost:8000
+	$(BIN)/python -m uvicorn app.main:app --port $(PORT)
+
+record: ## record the 3-min backup video + screenshots (needs `make demo` running, Playwright)
+	python3 scripts/record_demo.py --base http://localhost:$(PORT)
+
+deck: ## build the editable pitch deck docs/submission/Qorgan_pitch.pptx
+	$(BIN)/python scripts/build_deck.py
 
 dev: ## run the API with auto-reload on PORT (default 8000): / playground, /docs OpenAPI
 	$(BIN)/python -m uvicorn app.main:app --reload --port $(PORT)

@@ -5,3 +5,4 @@ httpx2==2.16.0  # imported by tests to mock the Anthropic SDK transport
 mypy==2.4.1
 pytest==9.2.0
 ruff==0.17.3
+python-pptx==1.0.2  # pitch deck builder (scripts/build_deck.py)
