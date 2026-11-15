@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qorgan — защита переводов</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z' fill='%2300875a'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f3f5f4; --panel:#ffffff; --ink:#14201b; --muted:#5d6b65; --line:#dfe5e2;
+  --brand:#00875a; --brand-ink:#ffffff; --brand-soft:#e3f4ec;
+  --warn:#b26a00; --warn-soft:#fff3dd; --danger:#c62f2f; --danger-soft:#fde9e8;
+  --ok:#1d7f4e; --ok-soft:#e2f5ea; --info:#2357b5; --info-soft:#e7eefb;
+  --phone:#0e1512; --radius:14px; --shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0d1311; --panel:#151d1a; --ink:#e7eeea; --muted:#94a39c; --line:#26312d;
+  --brand:#21b07d; --brand-soft:#123327; --warn:#f0a63a; --warn-soft:#3a2a10; --danger:#ff6b63; --danger-soft:#3c1716;
+  --ok:#45c985; --ok-soft:#12321f; --info:#7ea6ff; --info-soft:#18233d; --phone:#000; --shadow:none;
+}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,sans-serif}
+button{font:inherit;cursor:pointer}
+button:disabled{opacity:.55;cursor:not-allowed}
+.top{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:.2px}
+.logo small{display:block;font-weight:500;font-size:12px;color:var(--muted)}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;align-items:center}
+.badge{font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.badge.mock{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.badge.llm{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 14px;border-radius:10px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.btn.danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+.btn.ghost{background:transparent}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn.block{width:100%;padding:12px}
+
+.demo{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;background:var(--bg)}
+.demo h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.scenarios{display:flex;gap:6px;flex-wrap:wrap}
+.scenarios .btn.active{border-color:var(--brand);background:var(--brand-soft);color:var(--ink)}
+.signals{display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:14px}
+.signals label{display:flex;gap:6px;align-items:center;white-space:nowrap}
+.signals input[type=number]{width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink)}
+.story{font-size:13px;color:var(--muted);max-width:520px}
+
+.grid{display:grid;grid-template-columns:minmax(300px,360px) minmax(280px,330px) 1fr;gap:20px;padding:20px;align-items:start}
+@media (max-width:1180px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.analyst{grid-column:1/-1}}
+@media (max-width:760px){.grid{grid-template-columns:1fr;padding:12px 16px;gap:16px}.top,.demo{padding-left:16px;padding-right:16px}}
+.col-title{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
+
+.phone{background:var(--phone);border-radius:34px;padding:12px;box-shadow:var(--shadow);max-width:360px;margin:0 auto;width:100%}
+.screen{background:var(--panel);border-radius:24px;min-height:600px;overflow:hidden;display:flex;flex-direction:column}
+.statusbar{display:flex;justify-content:space-between;padding:10px 18px 4px;font-size:12px;color:var(--muted)}
+.callbar{background:var(--ok);color:#fff;font-size:13px;padding:7px 14px;display:flex;gap:8px;align-items:center;justify-content:center}
+.callbar.unknown{background:var(--danger)}
+.callbar .dot{width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.app{padding:16px 18px 20px;display:flex;flex-direction:column;gap:12px;flex:1}
+.app h2{margin:4px 0 0;font-size:20px}
+.muted{color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.field select,.field input,.field textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px}
+.field textarea{min-height:110px;resize:vertical}
+.acct{background:var(--brand-soft);border-radius:12px;padding:12px}
+.acct b{font-size:20px}
+.card{border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.card.warn{background:var(--warn-soft)} .card.danger{background:var(--danger-soft)} .card.ok{background:var(--ok-soft)} .card.info{background:var(--info-soft)}
+.card h3{margin:0;font-size:17px}
+.card.warn h3{color:var(--warn)} .card.danger h3{color:var(--danger)} .card.ok h3{color:var(--ok)}
+.card ul{margin:0;padding-left:18px}
+.center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;flex:1}
+.big-icon{font-size:52px;line-height:1}
+.spinner{width:36px;height:36px;border:4px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+
+.push{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.push .head{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.push.new{border-color:var(--danger);box-shadow:0 0 0 3px var(--danger-soft)}
+.empty{color:var(--muted);text-align:center;padding:30px 10px;font-size:14px}
+
+.analyst{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid var(--line)}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:12px 14px;border-right:1px solid var(--line)}
+.kpi:last-child{border-right:0}
+.kpi .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--muted)}
+.cons{display:grid;grid-template-columns:minmax(200px,250px) 1fr;min-height:520px}
+@media (max-width:900px){.cons{grid-template-columns:1fr}}
+.queue{border-right:1px solid var(--line);max-height:640px;overflow:auto}
+.qitem{padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.qitem:hover{background:var(--bg)}
+.qitem.sel{background:var(--brand-soft)}
+.qitem .t{display:flex;justify-content:space-between;gap:8px;font-weight:600;font-size:14px}
+.qitem .s{font-size:12px;color:var(--muted)}
+.pill{font-size:11px;padding:2px 7px;border-radius:999px;font-weight:600;white-space:nowrap}
+.pill.held{background:var(--danger-soft);color:var(--danger)}
+.pill.rejected{background:var(--danger);color:#fff}
+.pill.executed{background:var(--ok-soft);color:var(--ok)}
+.pill.cancelled_by_client{background:var(--info-soft);color:var(--info)}
+.pill.awaiting_answer,.pill.awaiting_confirmation{background:var(--warn-soft);color:var(--warn)}
+.detail{padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.dh{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.gauge{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:22px;flex:none}
+.gauge span{width:60px;height:60px;border-radius:50%;background:var(--panel);display:grid;place-items:center}
+.reasons{display:flex;flex-direction:column;gap:4px}
+.reason{display:grid;grid-template-columns:48px 1fr auto;gap:8px;align-items:center;font-size:14px}
+.reason .pts{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.reason .pts.neg{color:var(--ok)}
+.reason .grp{font-size:11px;color:var(--muted)}
+.bar{height:6px;border-radius:4px;background:var(--danger);opacity:.75}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.box{border:1px solid var(--line);border-radius:12px;padding:12px;font-size:14px;display:flex;flex-direction:column;gap:6px}
+.box h5{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.kv{display:flex;justify-content:space-between;gap:8px}
+.kv b{font-variant-numeric:tabular-nums}
+.flag{color:var(--danger);font-weight:600}
+.quote{border-left:3px solid var(--line);padding-left:10px;font-style:italic}
+.timeline{font-size:13px;display:flex;flex-direction:column;gap:4px;max-height:180px;overflow:auto}
+.timeline div{display:grid;grid-template-columns:62px 110px 1fr;gap:6px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--danger);color:#fff;padding:10px 16px;border-radius:10px;z-index:20;box-shadow:var(--shadow);max-width:90vw}
+.sim{font-size:11px;color:var(--muted);border:1px dashed var(--line);border-radius:8px;padding:6px 8px}
+.foot{padding:4px 20px 24px;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo">
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z" fill="var(--brand)"/><path d="m11 16 3.5 3.5L21.5 12" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div>Qorgan <small>Щит от переводов под диктовку мошенников · MVP для FINTECH CASE BCC</small></div>
+  </div>
+  <div class="badges">
+    <span class="badge" title="Все клиенты, счета и сигналы — синтетические">Синтетические данные</span>
+    <span class="badge" id="aiBadge">ИИ: …</span>
+    <button class="btn small" id="resetBtn" title="Очистить базу и пересоздать демо-историю">↺ Сбросить демо</button>
+  </div>
+</header>
+
+<section class="demo" aria-label="Демо-панель">
+  <div>
+    <h4>Сценарий</h4>
+    <div class="scenarios" id="scenarios"></div>
+    <p class="story" id="story"></p>
+  </div>
+  <div>
+    <h4>Сигналы телефона (симуляция SDK)</h4>
+    <div class="signals">
+      <label><input type="checkbox" id="sOnCall"> идёт звонок</label>
+      <label><input type="checkbox" id="sUnknown"> номер не из контактов</label>
+      <label>минут <input type="number" id="sMinutes" min="0" max="600" value="0"></label>
+      <label><input type="checkbox" id="sRemote"> удалённый доступ</label>
+      <label><input type="checkbox" id="sDevice"> новое устройство</label>
+      <label title="Пилот НБРК: оператор связи передаёт банку сигнал о мошенническом звонке"><input type="checkbox" id="sTelecom"> сигнал «Телеком Антифрод»</label>
+    </div>
+  </div>
+</section>
+
+<main class="grid">
+  <section aria-label="Приложение клиента">
+    <p class="col-title"><span>Клиент · приложение банка</span><span id="clientName"></span></p>
+    <div class="phone"><div class="screen">
+      <div class="statusbar"><span id="clock">12:00</span><span>4G ▮▮▮ 82%</span></div>
+      <div id="callbar"></div>
+      <div class="app" id="clientApp"></div>
+    </div></div>
+  </section>
+
+  <section aria-label="Доверенное лицо">
+    <p class="col-title"><span>Доверенное лицо · телефон</span><span id="tcName"></span></p>
+    <div class="phone"><div class="screen">
+      <div class="statusbar"><span id="clock2">12:00</span><span>LTE ▮▮▮ 64%</span></div>
+      <div class="app" id="trustedApp"></div>
+    </div></div>
+  </section>
+
+  <section class="analyst" aria-label="Консоль аналитика">
+    <div class="kpis" id="kpis"></div>
+    <div class="cons">
+      <div class="queue" id="queue"></div>
+      <div class="detail" id="detail"></div>
+    </div>
+  </section>
+</main>
+<p class="foot">Qorgan — учебный MVP для ITU HACKATHON-2026. Не является продуктом Банка ЦентрКредит. Данные клиентов, счета, сигналы телефона, уведомления и передача в Антифрод-центр — симуляция.</p>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const fmt = (n) => Math.round(n).toLocaleString('ru-RU').replace(/,/g, ' ') + ' ₸';
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const time = (iso) => new Date(iso).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
+const STATUS = {executed:'выполнен', awaiting_confirmation:'ждёт подтверждения', awaiting_answer:'проверка', held:'задержан', cancelled_by_client:'отменён клиентом', rejected:'отклонён'};
+const GROUP = {session:'сессия', amount:'сумма', recipient:'получатель', history:'история'};
+
+const S = {state:null, scenario:null, transfer:null, view:'form', busy:false, selected:null, cases:[], alerts:[], metrics:null};
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {headers: {'Content-Type': 'application/json'}, ...opts});
+  if (!res.ok) {
+    let msg = res.status + '';
+    try { const j = await res.json(); msg = typeof j.detail === 'string' ? j.detail : Array.isArray(j.detail) ? j.detail.map(d => d.msg).join('; ') : JSON.stringify(j.detail); } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 4000); }
+
+// ---------- demo panel ----------
+function renderScenarios() {
+  $('#scenarios').innerHTML = S.state.scenarios.map(s =>
+    `<button class="btn small ${S.scenario?.id === s.id ? 'active' : ''}" data-sc="${s.id}">${esc(s.title)}</button>`).join('');
+  $('#story').textContent = S.scenario ? S.scenario.story : 'Выберите сценарий или заполните перевод вручную.';
+}
+function applyScenario(id) {
+  S.scenario = S.state.scenarios.find(s => s.id === id);
+  const ss = S.scenario.session;
+  $('#sOnCall').checked = ss.on_call; $('#sUnknown').checked = ss.caller_unknown; $('#sMinutes').value = ss.call_minutes;
+  $('#sRemote').checked = ss.remote_access_app; $('#sDevice').checked = ss.new_device_24h; $('#sTelecom').checked = ss.telecom_fraud_flag;
+  S.transfer = null; S.view = 'form';
+  renderScenarios(); renderClient(); renderTrusted();
+}
+function session() {
+  return {on_call: $('#sOnCall').checked, caller_unknown: $('#sUnknown').checked, call_minutes: +$('#sMinutes').value || 0,
+          remote_access_app: $('#sRemote').checked, new_device_24h: $('#sDevice').checked, telecom_fraud_flag: $('#sTelecom').checked, local_hour: new Date().getHours()};
+}
+function client() { return S.state.clients.find(c => c.id === (S.scenario?.client_id || 'saule')); }
+
+// ---------- client phone ----------
+function renderCallbar() {
+  const s = session();
+  $('#callbar').innerHTML = s.on_call
+    ? `<div class="callbar ${s.caller_unknown ? 'unknown' : ''}"><span class="dot"></span>${s.caller_unknown ? 'Неизвестный номер' : 'Звонок'} · ${s.call_minutes}:00</div>` : '';
+}
+function renderClient() {
+  renderCallbar();
+  const c = client(), t = S.transfer, el = $('#clientApp');
+  $('#clientName').textContent = `${c.name}, ${c.age}`;
+  if (S.busy) { el.innerHTML = `<div class="center"><div class="spinner"></div><div>Проверяем безопасность перевода…</div></div>`; return; }
+  if (!t || S.view === 'form') {
+    const sc = S.scenario;
+    el.innerHTML = `
+      <h2>Перевод</h2>
+      <div class="acct"><div class="muted">Счёт ${esc(c.name.split(' ')[0])}</div><b>${fmt(c.balance)}</b></div>
+      <label class="field">Получатель
+        <select id="fRecipient">${S.state.recipients.map(r => `<option value="${r.id}" ${sc?.recipient_id === r.id ? 'selected' : ''}>${esc(r.display_name)} · ${esc(r.account_masked)}</option>`).join('')}</select></label>
+      <label class="field">Сумма, ₸<input id="fAmount" type="number" min="1" inputmode="numeric" value="${sc?.amount ?? 10000}"></label>
+      <label class="field">Назначение<input id="fPurpose" maxlength="200" value="${esc(sc?.purpose ?? '')}"></label>
+      <button class="btn primary block" id="sendBtn">Перевести</button>`;
+    $('#sendBtn').onclick = submitTransfer;
+    return;
+  }
+  const a = t.assessment, top = a.reasons.filter(r => r.points > 0).slice(0, 3);
+  const reasonsList = top.length ? `<ul>${top.map(r => `<li>${esc(r.text)}</li>`).join('')}</ul>` : '';
+  if (t.status === 'executed') {
+    el.innerHTML = `<div class="center"><div class="big-icon">✅</div><h2>Перевод выполнен</h2>
+      <div>${fmt(t.amount)} → ${esc(t.recipient_name)}</div>
+      <div class="muted">${t.analyst ? 'Аналитик проверил и выпустил перевод.' : a.level === 'allow' ? 'Обычный перевод — без лишних вопросов.' : 'Вы подтвердили перевод после предупреждения.'}</div>
+      <button class="btn ghost" id="newBtn">Новый перевод</button></div>`;
+  } else if (t.status === 'awaiting_confirmation') {
+    const ch = t.check;
+    el.innerHTML = `<div class="card warn"><h3>⚠️ Проверьте перевод</h3>
+      <div>${fmt(t.amount)} → ${esc(t.recipient_name)}</div>${reasonsList}
+      ${ch ? `<div>${esc(ch.advice)}</div>` : '<div>Если вас кто-то торопит или диктует действия — остановитесь.</div>'}</div>
+      <div class="row"><button class="btn" id="cancelBtn">Отменить</button><button class="btn primary" id="confirmBtn">Всё равно перевести</button></div>`;
+    $('#confirmBtn').onclick = () => act(`/api/transfers/${t.id}/confirm`);
+  } else if (t.status === 'awaiting_answer') {
+    el.innerHTML = `<div class="card danger"><h3>🛑 Остановитесь на минуту</h3>
+      <div>Этот перевод похож на мошенническую схему:</div>${reasonsList}
+      <div><b>Сотрудники банка и полиции никогда не просят переводить деньги.</b></div></div>
+      <label class="field">Расскажите своими словами: зачем вы переводите эти деньги и кто вас попросил?
+        <textarea id="answer" maxlength="1500" placeholder="Например: маме на лекарства"></textarea></label>
+      ${S.scenario?.suggested_answer ? `<button class="btn small ghost" id="fillBtn" title="Демо: вставить ответ из сценария">↳ вставить ответ из сценария</button>` : ''}
+      <div class="row"><button class="btn" id="cancelBtn">Отменить перевод</button><button class="btn primary" id="answerBtn">Отправить</button></div>`;
+    if ($('#fillBtn')) $('#fillBtn').onclick = () => { $('#answer').value = S.scenario.suggested_answer; };
+    $('#answerBtn').onclick = submitAnswer;
+  } else if (t.status === 'held') {
+    const ch = t.check, c2 = client();
+    el.innerHTML = `<div class="card danger"><h3>⏸ Перевод задержан на 60 минут</h3>
+      <div>${fmt(t.amount)} → ${esc(t.recipient_name)}</div>
+      ${ch && ch.verdict.script !== 'none' ? `<div>Похоже на схему: <b>${esc(ch.script_title)}</b></div><div>${esc(ch.advice)}</div>` : '<div>Перевод проверит специалист банка.</div>'}</div>
+      ${c2.trusted_contact ? `<div class="card info"><div>📲 Мы сообщили вашему доверенному лицу: <b>${esc(c2.trusted_contact.name)}</b> (${esc(c2.trusted_contact.relation)}).</div></div>` : ''}
+      <div class="card info"><div>📞 Положите трубку. Специалист банка перезвонит вам с официального номера.</div></div>
+      <button class="btn block" id="cancelBtn">Отменить перевод</button>`;
+  } else if (t.status === 'cancelled_by_client') {
+    el.innerHTML = `<div class="center"><div class="big-icon">🛡️</div><h2>Перевод отменён</h2><div>${fmt(t.amount)} остались на вашем счёте.</div><button class="btn ghost" id="newBtn">Новый перевод</button></div>`;
+  } else if (t.status === 'rejected') {
+    el.innerHTML = `<div class="center"><div class="big-icon">🛡️</div><h2>Деньги остались у вас</h2>
+      <div>Банк отклонил перевод ${fmt(t.amount)}: получатель — мошеннический счёт.</div><div class="muted">Счёт получателя заблокирован.</div>
+      <button class="btn ghost" id="newBtn">Новый перевод</button></div>`;
+  }
+  if ($('#cancelBtn')) $('#cancelBtn').onclick = () => act(`/api/transfers/${t.id}/cancel`);
+  if ($('#newBtn')) $('#newBtn').onclick = () => { S.transfer = null; S.view = 'form'; renderClient(); };
+}
+async function submitTransfer() {
+  const amount = +$('#fAmount').value;
+  if (!amount || amount <= 0) { toast('Введите сумму больше нуля'); return; }
+  if (amount > client().balance) { toast('Недостаточно средств: на счёте ' + fmt(client().balance)); return; }
+  const body = {client_id: client().id, recipient_id: $('#fRecipient').value, amount, purpose: $('#fPurpose').value, session: session()};
+  S.busy = true; renderClient();
+  try { S.transfer = await api('/api/transfers', {method: 'POST', body: JSON.stringify(body)}); S.view = 'result'; }
+  catch (e) { toast('Ошибка: ' + e.message); }
+  finally { S.busy = false; renderClient(); refresh(); }
+}
+async function submitAnswer() {
+  const answer = $('#answer').value.trim();
+  if (!answer) { toast('Напишите пару слов о цели перевода'); return; }
+  S.busy = true; renderClient();
+  try { S.transfer = await api(`/api/transfers/${S.transfer.id}/answer`, {method: 'POST', body: JSON.stringify({answer})}); }
+  catch (e) { toast('Ошибка: ' + e.message); }
+  finally { S.busy = false; renderClient(); refresh(); }
+}
+async function act(path, body) {
+  try {
+    const r = await api(path, {method: 'POST', body: body ? JSON.stringify(body) : undefined});
+    if (S.transfer && r.id === S.transfer.id) S.transfer = r;
+    renderClient(); refresh();
+  } catch (e) { toast('Ошибка: ' + e.message); }
+}
+
+// ---------- trusted contact phone ----------
+function renderTrusted() {
+  const c = client(), tc = c.trusted_contact, el = $('#trustedApp');
+  $('#tcName').textContent = tc ? `${tc.name} (${tc.relation})` : '—';
+  if (!tc) { el.innerHTML = `<div class="empty">У клиента ${esc(c.name)} нет доверенного лица.<br>Банк предложит назначить его в настройках безопасности.</div>`; return; }
+  const list = S.alerts.filter(a => a.client_id === c.id);
+  el.innerHTML = `<h2>Уведомления</h2><div class="sim">Доверенное лицо назначено клиентом заранее, с его согласия. Получает только уведомления о задержанных переводах — без доступа к счёту.</div>` +
+    (list.length ? list.map(a => `
+      <div class="push ${a.status === 'new' ? 'new' : ''}">
+        <div class="head"><span>🛡️ Qorgan · банк</span><span>${time(a.created_at)}</span></div>
+        <div><b>${esc(a.client_name.split(' ')[0])}, возможно, общается с мошенниками</b></div>
+        <div>Задержан перевод ${fmt(a.amount)} → ${esc(a.recipient_name)}${a.on_call ? ' (во время телефонного звонка)' : ''}</div>
+        ${a.script_title ? `<div class="muted">Похоже на: ${esc(a.script_title)}</div>` : ''}
+        ${a.status === 'new' ? `<div class="row"><button class="btn danger small" data-alert="${a.id}" data-r="scam">Это мошенники</button><button class="btn small" data-alert="${a.id}" data-r="ok">Я в курсе, всё нормально</button></div>`
+          : `<div class="muted">Ваш ответ: ${a.status === 'scam' ? '«это мошенники» — банк не выпустит перевод без проверки' : '«всё нормально» — передано специалисту'}</div>`}
+      </div>`).join('') : `<div class="empty">Уведомлений нет.<br>Они появятся, если банк задержит подозрительный перевод ${esc(c.name.split(' ')[0])}.</div>`);
+}
+
+// ---------- analyst console ----------
+function renderKpis() {
+  const m = S.metrics; if (!m) return;
+  $('#kpis').innerHTML = [
+    [fmt(m.prevented_amount), 'предотвращено (отклонено + отменено)'],
+    [m.open_cases, 'кейсов ждут решения'],
+    [(m.friction_rate * 100).toFixed(1) + '%', `переводов с вмешательством (из ${m.transfers_total})`],
+    [m.false_positives, 'ложных срабатываний'],
+  ].map(([v, l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+}
+function renderQueue() {
+  const q = $('#queue');
+  if (!S.cases.length) { q.innerHTML = `<div class="empty">Очередь пуста.<br>Сюда попадают переводы, где Qorgan вмешался.</div>`; return; }
+  q.innerHTML = S.cases.map(c => `
+    <div class="qitem ${S.selected === c.id ? 'sel' : ''}" data-case="${c.id}">
+      <div class="t"><span>${fmt(c.amount)}</span><span class="pill ${c.status}">${STATUS[c.status]}</span></div>
+      <div class="s">${esc(c.client_name)} → ${esc(c.recipient_name)}</div>
+      <div class="s">риск ${c.assessment.score} · ${c.check ? esc(c.check.script_title) : 'без проверки'} · ${time(c.created_at)}</div>
+    </div>`).join('');
+}
+function gaugeColor(s) { return s >= 80 ? 'var(--danger)' : s >= 55 ? 'var(--warn)' : s >= 30 ? 'var(--info)' : 'var(--ok)'; }
+function renderDetail() {
+  const d = $('#detail'), c = S.cases.find(x => x.id === S.selected);
+  if (!c) { d.innerHTML = `<div class="empty">Выберите кейс слева.</div>`; return; }
+  const a = c.assessment, r = S.state.recipients.find(x => x.id === c.recipient_id), maxPts = Math.max(...a.reasons.map(x => Math.abs(x.points)), 1);
+  const ch = c.check;
+  d.innerHTML = `
+    <div class="dh">
+      <div class="gauge" style="background:conic-gradient(${gaugeColor(a.score)} ${a.score * 3.6}deg, var(--line) 0)"><span>${a.score}</span></div>
+      <div><div style="font-size:20px;font-weight:700">${fmt(c.amount)} <span class="pill ${c.status}">${STATUS[c.status]}</span></div>
+        <div class="muted">${esc(c.client_name)} → ${esc(c.recipient_name)} (${esc(c.recipient_bank)}) · ${c.id}</div>
+        <div class="muted">Назначение: «${esc(c.purpose || '—')}»</div></div>
+    </div>
+    <div class="box"><h5>Почему балл ${a.score}/100</h5><div class="reasons">
+      ${a.reasons.map(x => `<div class="reason"><span class="pts ${x.points < 0 ? 'neg' : ''}">${x.points > 0 ? '+' : ''}${x.points}</span>
+        <span>${esc(x.text)} <span class="grp">· ${GROUP[x.group]}</span><div class="bar" style="width:${Math.abs(x.points) / maxPts * 100}%;${x.points < 0 ? 'background:var(--ok)' : ''}"></div></span><span></span></div>`).join('')}
+    </div></div>
+    <div class="two">
+      <div class="box"><h5>Ответ клиента и вердикт ИИ</h5>
+        ${ch ? `<div class="quote">${esc(ch.answer)}</div>
+          <div class="kv"><span>Сценарий</span><b class="${ch.verdict.script !== 'none' ? 'flag' : ''}">${esc(ch.script_title)}</b></div>
+          <div class="kv"><span>Уверенность</span><b>${Math.round(ch.verdict.confidence * 100)}%</b></div>
+          ${ch.verdict.signals.length ? `<div>Признаки: ${ch.verdict.signals.map(esc).join('; ')}</div>` : ''}
+          <div class="muted">${esc(ch.verdict.analyst_note)}</div>
+          <div class="muted">Источник: ${ch.source === 'llm' ? 'LLM' : ch.source === 'cache' ? 'LLM (кэш)' : ch.source === 'mock' ? 'офлайн-эвристика (mock)' : 'эвристика (LLM недоступна)'} · решение: ${esc(ch.decision_reason)}</div>`
+          : '<div class="muted">Проверочный диалог не проводился.</div>'}
+      </div>
+      <div class="box"><h5>Получатель — признаки дропа</h5>
+        ${r ? `<div class="kv"><span>Возраст счёта</span><b class="${r.account_age_days < 30 ? 'flag' : ''}">${r.account_age_days} дн.</b></div>
+          <div class="kv"><span>Разных отправителей за 24 ч</span><b class="${r.unique_senders_24h >= 10 ? 'flag' : ''}">${r.unique_senders_24h}</b></div>
+          <div class="kv"><span>Вывод средств за 24 ч</span><b class="${r.cash_out_ratio_24h >= 0.8 ? 'flag' : ''}">${Math.round(r.cash_out_ratio_24h * 100)}%</b></div>
+          <div class="kv"><span>В базе мошеннических счетов</span><b>${r.in_antifraud_db ? 'да' : 'нет'}</b></div>
+          <div class="sim">В проде — данные core banking и обмена с Антифрод-центром НБРК. Здесь — симулятор.</div>` : ''}
+        <div class="kv"><span>Доверенное лицо</span><b class="${c.trusted_response === 'scam' ? 'flag' : ''}">${c.trusted_response === 'scam' ? 'считает, что мошенники' : c.trusted_response === 'ok' ? 'подтверждает перевод' : c.alert_id ? 'ещё не ответило' : 'нет'}</b></div>
+      </div>
+    </div>
+    <div class="box"><h5>Хронология</h5><div class="timeline">${c.timeline.map(e => `<div><span class="muted">${time(e.at)}</span><b>${esc(e.actor)}</b><span>${esc(e.text)}</span></div>`).join('')}</div></div>
+    ${c.status === 'held' ? `<div class="actions">
+      <button class="btn danger" data-dec="reject">Отклонить и заблокировать получателя</button>
+      <button class="btn" data-dec="release">Выпустить перевод</button>
+      <button class="btn ghost" data-dec="false_positive">Ложное срабатывание</button></div>`
+      : c.analyst ? `<div class="muted">Решение аналитика: ${({reject: 'отклонён', release: 'выпущен', false_positive: 'ложное срабатывание'})[c.analyst.decision]} в ${time(c.analyst.at)}</div>` : ''}`;
+}
+
+// ---------- events & polling ----------
+document.addEventListener('click', async (ev) => {
+  const sc = ev.target.closest('[data-sc]'); if (sc) return applyScenario(sc.dataset.sc);
+  const al = ev.target.closest('[data-alert]');
+  if (al) { await act(`/api/alerts/${al.dataset.alert}/respond`, {response: al.dataset.r}); return; }
+  const qi = ev.target.closest('[data-case]'); if (qi) { S.selected = qi.dataset.case; renderQueue(); renderDetail(); return; }
+  const dec = ev.target.closest('[data-dec]');
+  if (dec) { await act(`/api/cases/${S.selected}/decision`, {decision: dec.dataset.dec}); return; }
+});
+['#sOnCall', '#sUnknown', '#sMinutes', '#sRemote', '#sDevice', '#sTelecom'].forEach(id => $(id).addEventListener('input', renderCallbar));
+$('#resetBtn').onclick = async () => {
+  if (!confirm('Сбросить демо? Все переводы, кейсы и уведомления будут удалены, история пересоздана.')) return;
+  try { await api('/api/demo/reset', {method: 'POST'}); S.transfer = null; S.view = 'form'; S.selected = null; applyScenario(S.state.scenarios[0].id); refresh(); }
+  catch (e) { toast('Ошибка сброса: ' + e.message); }
+};
+
+async function refresh() {
+  try {
+    const [cases, alerts, metrics] = await Promise.all([api('/api/cases'), api('/api/alerts'), api('/api/metrics')]);
+    S.cases = cases; S.alerts = alerts; S.metrics = metrics;
+    if (!S.selected || !cases.find(c => c.id === S.selected)) S.selected = cases[0]?.id ?? null;
+    if (S.transfer) { const fresh = cases.find(c => c.id === S.transfer.id); if (fresh && fresh.status !== S.transfer.status) { S.transfer = fresh; renderClient(); } }
+    renderKpis(); renderQueue(); renderDetail(); renderTrusted();
+  } catch (e) { toast('Нет связи с сервером: ' + e.message); }
+}
+function tick() { const t = new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'}); $('#clock').textContent = t; $('#clock2').textContent = t; }
+
+(async function init() {
+  $('#clientApp').innerHTML = `<div class="center"><div class="spinner"></div><div>Загрузка…</div></div>`;
+  try {
+    S.state = await api('/api/demo/state');
+    const b = $('#aiBadge');
+    b.textContent = S.state.ai_mode === 'llm' ? 'ИИ: LLM' : 'ИИ: офлайн (MOCK)';
+    b.className = 'badge ' + (S.state.ai_mode === 'llm' ? 'llm' : 'mock');
+    b.title = S.state.ai_mode === 'llm' ? 'Ответы клиента анализирует языковая модель' : 'Ключа LLM нет: работает офлайн-эвристика';
+    applyScenario(S.state.scenarios[0].id);
+    await refresh();
+    setInterval(refresh, 2500); tick(); setInterval(tick, 15000);
+  } catch (e) {
+    $('#clientApp').innerHTML = `<div class="center"><div class="big-icon">⚠️</div><div>Не удалось загрузить демо: ${esc(e.message)}</div><button class="btn" onclick="location.reload()">Повторить</button></div>`;
+  }
+})();
+</script>
+</body>
+</html>

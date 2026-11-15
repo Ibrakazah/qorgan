@@ -5,13 +5,10 @@ from pathlib import Path
 
 import pytest
 
-# Example-task tests: skipped once the `moderation` example is deleted (see README, «Новая задача»).
-pytest.importorskip("app.tasks.moderation", reason="example task removed")
-
 from evals.metrics import ERROR_LABEL, binary_report, classification_report, percentile
 from evals.run_eval import main, run_eval
 
-DATASET = Path(__file__).parents[1] / "evals" / "datasets" / "moderation_sample.jsonl"
+DATASET = Path(__file__).parents[1] / "evals" / "datasets" / "scam_script.jsonl"
 
 
 def test_classification_report_matches_hand_computation() -> None:
@@ -44,7 +41,7 @@ def test_percentile_interpolates_like_numpy() -> None:
 
 
 def test_run_eval_writes_report_and_predictions(tmp_path: Path) -> None:
-    result, report = asyncio.run(run_eval("moderation", DATASET, limit=8, concurrency=2, out_dir=tmp_path))
+    result, report = asyncio.run(run_eval("scam_script", DATASET, limit=8, concurrency=2, out_dir=tmp_path))
     assert len(result.predictions) == 8
     assert result.usage.by_source == {"mock": 8}
     assert result.binary is not None
@@ -55,7 +52,7 @@ def test_run_eval_writes_report_and_predictions(tmp_path: Path) -> None:
 
 
 def test_cli_fail_under_gate(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    args = ["--task", "moderation", "--dataset", str(DATASET), "--limit", "5", "--out", str(tmp_path)]
+    args = ["--task", "scam_script", "--dataset", str(DATASET), "--limit", "5", "--out", str(tmp_path)]
     assert main(args) == 0
     assert main([*args, "--fail-under", "1.01"]) == 1
     assert "macro-F1" in capsys.readouterr().out

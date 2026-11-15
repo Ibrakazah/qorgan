@@ -18,6 +18,8 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from app.config import get_settings
 from app.llm import LLMError, UsageTotals, get_llm
+from app.qorgan import service, store
+from app.qorgan.api import router as qorgan_router
 from app.schemas import (
     MAX_BATCH_ITEMS,
     BatchItem,
@@ -40,14 +42,17 @@ for _noisy in ("httpx", "httpx2"):  # one INFO line per HTTP request is too chat
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    if not store.all_docs("transfers"):  # first start: seed the synthetic demo history
+        service.reset_demo()
     yield
     await get_llm().aclose()
 
 
 app = FastAPI(
-    title="AI Service — hackathon template",
+    title="Qorgan — защита от переводов под диктовку мошенников",
     version="0.1.0",
-    description="LLM-задачи для игровой студии: структурированный JSON, кэш, mock-режим, evals.",
+    description="MVP для FINTECH CASE Банка ЦентрКредит (ITU HACKATHON-2026): оценка риска перевода, "
+    "проверочный диалог с ИИ, доверенное лицо, консоль аналитика. Данные синтетические.",
     lifespan=lifespan,
 )
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_methods=["*"], allow_headers=["*"])
@@ -93,8 +98,16 @@ async def usage() -> UsageTotals:
 
 
 @app.get("/", include_in_schema=False)
+async def qorgan_app() -> FileResponse:
+    return FileResponse(STATIC_DIR / "app.html")
+
+
+@app.get("/playground", include_in_schema=False)
 async def playground() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
+
+
+app.include_router(qorgan_router)
 
 
 def task_router(task: AnyTask) -> APIRouter:
