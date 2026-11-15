@@ -33,6 +33,11 @@ class RiskAssessment(BaseModel):
     score: int = Field(ge=0, le=100)
     level: Level
     reasons: list[Reason]
+    mule_pattern: bool = Field(
+        default=False,
+        description="Получатель похож на дроп: в стоп-листе или набрал ≥ 30 баллов признаков дропа. "
+        "Такой перевод проверяет человек при любом ответе клиента.",
+    )
 
 
 class TransferRequest(BaseModel):
@@ -47,7 +52,19 @@ def _fmt(amount: float) -> str:
     return f"{round(amount):,}".replace(",", " ") + " ₸"
 
 
-def assess(req: TransferRequest, client: ClientProfile, recipient: RecipientProfile) -> RiskAssessment:
+MULE_POINTS: Final = 30
+
+
+def assess(
+    req: TransferRequest,
+    client: ClientProfile,
+    recipient: RecipientProfile,
+    *,
+    balance: int | None = None,
+    stoplisted: bool = False,
+) -> RiskAssessment:
+    """`balance` — current available balance (defaults to the profile); `stoplisted` — recipient was
+    rejected by an analyst earlier (bank's own stop-list)."""
     reasons: list[Reason] = []
 
     def add(code: str, group: Group, points: int, text: str) -> None:
@@ -80,14 +97,15 @@ def assess(req: TransferRequest, client: ClientProfile, recipient: RecipientProf
             15,
             f"Сумма в {ratio:.0f} раз больше обычного перевода ({_fmt(client.avg_transfer_90d)})",
         )
-    share = req.amount / max(client.balance, 1)
+    share = req.amount / max(client.balance if balance is None else balance, 1)
     if share >= 0.6:
-        add("drains_balance", "amount", 10, f"Переводится {share:.0%} всех средств на счёте")
+        add("drains_balance", "amount", 15, f"Переводится {share:.0%} всех средств на счёте")
 
     # --- Recipient: money-mule markers ----------------------------------------------------------
     prior = recipient.prior_transfers_from_client.get(req.client_id, 0)
-    if recipient.in_antifraud_db:
-        add("recipient_blacklisted", "recipient", 40, "Счёт получателя в базе мошеннических счетов")
+    if recipient.in_antifraud_db or stoplisted:
+        where = "стоп-листе банка" if stoplisted else "базе мошеннических счетов"
+        add("recipient_blacklisted", "recipient", 40, f"Счёт получателя в {where}")
     if prior == 0:
         add("new_recipient", "recipient", 10, "Первый перевод этому получателю")
     if recipient.account_age_days < 30:
@@ -108,10 +126,16 @@ def assess(req: TransferRequest, client: ClientProfile, recipient: RecipientProf
         )
 
     # --- History: trust earned by repeated normal transfers --------------------------------------
-    if prior >= 3 and not s.remote_access_app and not (s.on_call and s.caller_unknown):
+    coerced = s.remote_access_app or s.telecom_fraud_flag or (s.on_call and s.caller_unknown)
+    unusual_amount = any(r.code == "amount_spike" for r in reasons)
+    if prior >= 3 and not coerced and not unusual_amount:
         add("trusted_recipient", "history", -20, f"Клиент уже {prior} раз переводил этому получателю")
 
     score = max(0, min(100, sum(r.points for r in reasons)))
+    mule = sum(r.points for r in reasons if r.group == "recipient" and r.code != "new_recipient") >= MULE_POINTS
+    mule = mule or any(r.code == "recipient_blacklisted" for r in reasons)
     level: Level = "allow" if score < WARN_FROM else "warn" if score < CHECK_FROM else "safety_check"
+    if mule:  # a mule recipient always gets the safety check, even for a small amount
+        level = "safety_check"
     reasons.sort(key=lambda r: -r.points)
-    return RiskAssessment(score=score, level=level, reasons=reasons)
+    return RiskAssessment(score=score, level=level, reasons=reasons, mule_pattern=mule)

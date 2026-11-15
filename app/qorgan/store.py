@@ -16,10 +16,13 @@ from pathlib import Path
 from typing import Any
 
 _LOCK = threading.Lock()
+TABLES = ("transfers", "alerts", "stoplist", "idempotency")
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS transfers (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, doc TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS alerts (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, doc TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS stoplist (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, doc TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS idempotency (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, doc TEXT NOT NULL);
 """
 
 
@@ -42,7 +45,7 @@ def _connect() -> Iterator[sqlite3.Connection]:
 
 
 def put(table: str, doc_id: str, created_at: str, doc: dict[str, Any]) -> None:
-    assert table in ("transfers", "alerts")
+    assert table in TABLES
     with _LOCK, _connect() as conn:
         conn.execute(
             f"INSERT INTO {table} (id, created_at, doc) VALUES (?, ?, ?) "
@@ -52,14 +55,14 @@ def put(table: str, doc_id: str, created_at: str, doc: dict[str, Any]) -> None:
 
 
 def get(table: str, doc_id: str) -> dict[str, Any] | None:
-    assert table in ("transfers", "alerts")
+    assert table in TABLES
     with _LOCK, _connect() as conn:
         row = conn.execute(f"SELECT doc FROM {table} WHERE id = ?", (doc_id,)).fetchone()
     return json.loads(row[0]) if row else None
 
 
 def all_docs(table: str) -> list[dict[str, Any]]:
-    assert table in ("transfers", "alerts")
+    assert table in TABLES
     with _LOCK, _connect() as conn:
         rows = conn.execute(f"SELECT doc FROM {table} ORDER BY created_at DESC, id DESC").fetchall()
     return [json.loads(r[0]) for r in rows]
@@ -67,5 +70,5 @@ def all_docs(table: str) -> list[dict[str, Any]]:
 
 def wipe() -> None:
     with _LOCK, _connect() as conn:
-        conn.execute("DELETE FROM transfers")
-        conn.execute("DELETE FROM alerts")
+        for table in TABLES:
+            conn.execute(f"DELETE FROM {table}")

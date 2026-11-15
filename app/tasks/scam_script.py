@@ -287,11 +287,12 @@ class ScamScriptTask(Task[ScamScriptInput, ScamScriptOutput]):
         # A "none" verdict cannot carry high confidence when hard pressure markers are present:
         # the model may have been talked into it by the client's text (prompt injection).
         hard = classify_heuristically(payload)
-        if output.script == "none" and hard.script not in ("none",) and hard.confidence >= 0.7:
+        weak = output.script == "none" or output.confidence < 0.6
+        if weak and hard.script != "none" and hard.confidence >= 0.7:
             return hard.model_copy(
                 update={
-                    "analyst_note": "Модель вернула none, но найдены сильные признаки сценария — "
-                    "оставлен вердикт эвристики. " + hard.analyst_note
+                    "analyst_note": "Модель не уверена или вернула none, но найдены сильные признаки сценария — "
+                    "оставлен вердикт правил. " + hard.analyst_note
                 }
             )
         return output

@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 
 from app.qorgan import store
 from app.qorgan.bank_sim import CLIENTS, RECIPIENTS, SessionSignals, get_client, get_recipient
-from app.qorgan.policy import COOLING_OFF_MINUTES, decide_after_check
+from app.qorgan.policy import decide_after_check
 from app.qorgan.risk import TransferRequest, assess
 from app.tasks import get_task
 from app.tasks.scam_script import CLIENT_ADVICE, SCRIPT_TITLES, ScamScriptInput, ScamScriptOutput
@@ -66,15 +66,35 @@ def _save(doc: dict[str, Any]) -> dict[str, Any]:
 # --- create -------------------------------------------------------------------------------------
 
 
-def create_transfer(req: TransferRequest) -> dict[str, Any]:
+def available_balance(client_id: str) -> int:
+    """Profile balance minus transfers executed in this demo (synthetic history is already in the profile)."""
+    spent: int = sum(
+        int(d["amount"])
+        for d in store.all_docs("transfers")
+        if d["client_id"] == client_id and d["status"] == "executed" and not d.get("synthetic_history")
+    )
+    return get_client(client_id).balance - spent
+
+
+def balances() -> dict[str, int]:
+    return {cid: available_balance(cid) for cid in CLIENTS}
+
+
+def create_transfer(req: TransferRequest, idempotency_key: str | None = None) -> dict[str, Any]:
+    if idempotency_key:
+        seen = store.get("idempotency", idempotency_key)
+        if seen is not None:  # retried request: return the same transfer, never a second one
+            return _load(seen["transfer_id"])
     if req.client_id not in CLIENTS:
         raise NotFoundError(req.client_id)
     if req.recipient_id not in RECIPIENTS:
         raise NotFoundError(req.recipient_id)
     client, recipient = get_client(req.client_id), get_recipient(req.recipient_id)
-    if req.amount > client.balance:
-        raise FlowError(f"Недостаточно средств: на счёте {client.balance} ₸")
-    assessment = assess(req, client, recipient)
+    balance = available_balance(client.id)
+    if req.amount > balance:
+        raise FlowError(f"Недостаточно средств: доступно {balance} ₸")
+    stoplisted = store.get("stoplist", recipient.id) is not None
+    assessment = assess(req, client, recipient, balance=balance, stoplisted=stoplisted)
     status = {"allow": "executed", "warn": "awaiting_confirmation", "safety_check": "awaiting_answer"}[assessment.level]
     doc: dict[str, Any] = {
         "id": "T-" + uuid.uuid4().hex[:8].upper(),
@@ -97,9 +117,24 @@ def create_transfer(req: TransferRequest) -> dict[str, Any]:
         "timeline": [],
     }
     _event(doc, "система", f"Оценка риска: {assessment.score}/100 → {assessment.level}")
+    if assessment.mule_pattern:
+        _event(doc, "система", "Получатель похож на дроп — перевод проверит специалист при любом ответе")
     if status == "executed":
         _event(doc, "система", "Перевод выполнен без дополнительных проверок")
-    return _save(doc)
+    _save(doc)
+    if idempotency_key:
+        store.put("idempotency", idempotency_key, doc["created_at"], {"transfer_id": doc["id"]})
+    return doc
+
+
+def _close_alert(doc: dict[str, Any], reason: str) -> None:
+    """The trusted contact's buttons make no sense once the transfer is decided."""
+    if doc.get("alert_id"):
+        alert = store.get("alerts", doc["alert_id"])
+        if alert is not None and alert["status"] == "new":
+            alert["status"] = "closed"
+            alert["closed_reason"] = reason
+            store.put("alerts", alert["id"], alert["created_at"], alert)
 
 
 # --- client actions -----------------------------------------------------------------------------
@@ -120,6 +155,7 @@ def cancel(transfer_id: str) -> dict[str, Any]:
         raise FlowError(f"Отмена недоступна в статусе {doc['status']}")
     doc["status"] = "cancelled_by_client"
     _event(doc, "клиент", "Клиент отменил перевод")
+    _close_alert(doc, "клиент сам отменил перевод")
     return _save(doc)
 
 
@@ -133,7 +169,7 @@ async def answer_safety_check(transfer_id: str, answer: str) -> dict[str, Any]:
     )
     result = await task.run(payload)
     verdict: ScamScriptOutput = result.output
-    decision, why = decide_after_check(doc["assessment"]["score"], verdict)
+    decision, why = decide_after_check(doc["assessment"]["score"], verdict, bool(doc["assessment"].get("mule_pattern")))
     doc["check"] = {
         "answer": answer,
         "verdict": verdict.model_dump(),
@@ -158,8 +194,7 @@ async def answer_safety_check(transfer_id: str, answer: str) -> dict[str, Any]:
 
 def _hold(doc: dict[str, Any], why: str) -> None:
     doc["status"] = "held"
-    doc["hold_until"] = _iso(_now() + timedelta(minutes=COOLING_OFF_MINUTES))
-    _event(doc, "система", f"Перевод задержан на {COOLING_OFF_MINUTES} мин: {why}. Кейс передан аналитику")
+    _event(doc, "система", f"Перевод задержан до проверки специалистом: {why}")
     client = get_client(doc["client_id"])
     if client.trusted_contact is not None:
         alert_id = "A-" + uuid.uuid4().hex[:8].upper()
@@ -197,7 +232,7 @@ def respond_alert(alert_id: str, response: TrustedResponse) -> dict[str, Any]:
     if alert is None:
         raise NotFoundError(alert_id)
     if alert["status"] != "new":
-        raise FlowError("На это уведомление уже ответили")
+        raise FlowError("На это уведомление уже ответили или перевод уже решён")
     alert["status"] = response
     alert["responded_at"] = _iso(_now())
     store.put("alerts", alert_id, alert["created_at"], alert)
@@ -225,12 +260,20 @@ def analyst_decide(transfer_id: str, decision: AnalystDecision, note: str = "") 
     doc["analyst"] = {"decision": decision, "note": note, "at": _iso(_now())}
     if decision == "reject":
         doc["status"] = "rejected"
-        _event(doc, "аналитик", "Перевод отклонён, счёт получателя передан в стоп-лист и АФЦ (симуляция)")
+        entry = {"recipient_id": doc["recipient_id"], "transfer_id": doc["id"]}
+        store.put("stoplist", doc["recipient_id"], _iso(_now()), entry)
+        _event(doc, "аналитик", "Перевод отклонён; получатель — в стоп-листе банка, инцидент — для АФЦ (симуляция)")
+        _close_alert(doc, "аналитик отклонил перевод")
     else:
         doc["status"] = "executed"
         label = "ложное срабатывание" if decision == "false_positive" else "проверено"
         _event(doc, "аналитик", f"Перевод выпущен ({label})")
+        _close_alert(doc, "аналитик выпустил перевод")
     return _save(doc)
+
+
+def stoplist() -> list[str]:
+    return [d["recipient_id"] for d in store.all_docs("stoplist")]
 
 
 def get_transfer(transfer_id: str) -> dict[str, Any]:

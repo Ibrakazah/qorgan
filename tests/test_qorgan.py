@@ -81,6 +81,18 @@ def test_ai_cannot_release_a_high_score_transfer() -> None:
     assert decision == "hold"
 
 
+def test_ai_cannot_release_a_mule_transfer() -> None:
+    assert decide_after_check(56, _verdict("none", 0.99), mule_pattern=True)[0] == "hold"
+
+
+def test_unsure_model_does_not_override_strong_rules() -> None:
+    from app.tasks.scam_script import ScamScriptTask
+
+    payload = ScamScriptInput(answer="Звонил сотрудник службы безопасности банка, перевести на безопасный счёт срочно")
+    fixed = ScamScriptTask().postprocess(payload, _verdict("fake_bank_security", 0.5))
+    assert fixed.confidence >= 0.7
+
+
 def test_confident_script_holds_even_at_moderate_score() -> None:
     assert decide_after_check(56, _verdict("relative_in_trouble", 0.8))[0] == "hold"
     assert decide_after_check(56, _verdict("relative_in_trouble", 0.4))[0] == "proceed_with_confirmation"
@@ -168,10 +180,62 @@ def test_client_without_trusted_contact_gets_no_alert(api: TestClient) -> None:
 
 
 def test_innocent_answer_at_moderate_score_asks_confirmation(api: TestClient) -> None:
-    t = _send(api, "olx")  # score 60 < HOLD_FROM
+    # Unknown caller + big amount to a normal (non-mule) recipient: score 70, safety check, no mule pattern.
+    body = {"client_id": "erlan", "recipient_id": "friend", "amount": 400_000,
+            "session": {"on_call": True, "caller_unknown": True}}  # fmt: skip
+    t = api.post("/api/transfers", json=body).json()
+    assert t["status"] == "awaiting_answer" and not t["assessment"]["mule_pattern"]
     t = api.post(f"/api/transfers/{t['id']}/answer", json={"answer": "Оплачиваю ремонт, работы уже сделаны"}).json()
     assert t["status"] == "awaiting_confirmation"
     assert api.post(f"/api/transfers/{t['id']}/confirm").json()["status"] == "executed"
+    assert api.get("/api/balances").json()["erlan"] == 640_000 - 400_000
+
+
+def test_coached_lie_to_a_mule_is_still_held(api: TestClient) -> None:
+    t = _send(api, "fake_security")  # score 75 < HOLD_FROM, but the recipient is a mule
+    assert t["assessment"]["mule_pattern"]
+    t = api.post(f"/api/transfers/{t['id']}/answer", json={"answer": "Маме на лекарства"}).json()
+    assert t["check"]["verdict"]["script"] == "none"
+    assert t["status"] == "held"
+
+
+def test_rejected_recipient_goes_to_stoplist(api: TestClient) -> None:
+    t = _send(api, "fake_security")
+    t = api.post(f"/api/transfers/{t['id']}/answer", json={"answer": SC["fake_security"].suggested_answer}).json()
+    api.post(f"/api/cases/{t['id']}/decision", json={"decision": "reject"})
+    assert api.get("/api/stoplist").json() == ["mule"]
+    again = api.post("/api/transfers", json={"client_id": "erlan", "recipient_id": "mule", "amount": 5_000}).json()
+    assert "recipient_blacklisted" in {r["code"] for r in again["assessment"]["reasons"]}
+    assert again["status"] == "awaiting_answer"  # even 5 000 ₸ to a stop-listed account gets the check
+
+
+def test_alert_is_closed_once_transfer_is_decided(api: TestClient) -> None:
+    t = _send(api, "fake_security")
+    t = api.post(f"/api/transfers/{t['id']}/answer", json={"answer": SC["fake_security"].suggested_answer}).json()
+    api.post(f"/api/transfers/{t['id']}/cancel")
+    alert = api.get("/api/alerts").json()[0]
+    assert alert["status"] == "closed"
+    assert api.post(f"/api/alerts/{alert['id']}/respond", json={"response": "scam"}).status_code == 409
+
+
+@pytest.mark.parametrize("answer", ["   ", "🙂🙂", "1"])
+def test_meaningless_answer_is_rejected(api: TestClient, answer: str) -> None:
+    t = _send(api, "fake_security")
+    assert api.post(f"/api/transfers/{t['id']}/answer", json={"answer": answer}).status_code == 422
+
+
+def test_idempotency_key_prevents_duplicates(api: TestClient) -> None:
+    body = {"client_id": "saule", "recipient_id": "grandson", "amount": 15_000}
+    headers = {"Idempotency-Key": "abc-1"}
+    first = api.post("/api/transfers", json=body, headers=headers).json()
+    second = api.post("/api/transfers", json=body, headers=headers).json()
+    assert first["id"] == second["id"]
+    assert api.get("/api/balances").json()["saule"] == 1_240_000 - 15_000
+
+
+def test_draining_balance_to_a_known_recipient_is_not_silent(api: TestClient) -> None:
+    t = api.post("/api/transfers", json={"client_id": "saule", "recipient_id": "grandson", "amount": 1_000_000}).json()
+    assert t["assessment"]["level"] != "allow"
 
 
 def test_false_positive_release_is_counted(api: TestClient) -> None:
@@ -191,7 +255,7 @@ def test_client_cancel_counts_as_prevented(api: TestClient) -> None:
 
 @pytest.mark.parametrize(
     ("path", "body"),
-    [("confirm", None), ("answer", {"answer": "x"})],
+    [("confirm", None), ("answer", {"answer": "Маме на лекарства"})],
 )
 def test_wrong_state_transitions_are_409(api: TestClient, path: str, body: dict[str, str] | None) -> None:
     t = _send(api, "normal")  # already executed

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Header, HTTPException
+from pydantic import BaseModel, Field, field_validator
 
 from app.llm import get_llm
 from app.qorgan import service
@@ -17,6 +17,14 @@ router = APIRouter(prefix="/api", tags=["Qorgan"])
 
 class AnswerBody(BaseModel):
     answer: str = Field(min_length=1, max_length=1500)
+
+    @field_validator("answer")
+    @classmethod
+    def meaningful(cls, value: str) -> str:
+        value = value.strip()
+        if sum(ch.isalpha() for ch in value) < 2:
+            raise ValueError("Напишите своими словами, зачем вы переводите деньги")
+        return value
 
 
 class DecisionBody(BaseModel):
@@ -58,9 +66,22 @@ async def demo_reset() -> service.Metrics:
 
 
 @router.post("/transfers")
-async def create_transfer(req: TransferRequest) -> dict[str, Any]:
-    result: dict[str, Any] = _guard(service.create_transfer, req)
+async def create_transfer(
+    req: TransferRequest, idempotency_key: str | None = Header(default=None, max_length=100)
+) -> dict[str, Any]:
+    """Оценка перевода до исполнения. `Idempotency-Key`: повтор запроса вернёт тот же перевод."""
+    result: dict[str, Any] = _guard(service.create_transfer, req, idempotency_key)
     return result
+
+
+@router.get("/balances")
+async def get_balances() -> dict[str, int]:
+    return service.balances()
+
+
+@router.get("/stoplist")
+async def get_stoplist() -> list[str]:
+    return service.stoplist()
 
 
 @router.get("/transfers/{transfer_id}")
