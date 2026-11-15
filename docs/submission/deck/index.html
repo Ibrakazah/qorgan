@@ -92,6 +92,25 @@ hr.rule{border:0;border-top:3px solid var(--rule);margin:36px 0}
 .defs .d .h{font:700 36px/1.2 var(--serif)}
 .defs .d .b{font:26px/1.35 var(--sans);color:var(--ink2);margin-top:8px}
 
+
+/* 3 — three steps */
+.s3{display:grid;grid-template-columns:1fr 70px 1fr 70px 1fr;align-items:start;margin-top:40px}
+.s3 .num{width:52px;height:52px;border-radius:50%;background:var(--ink);color:var(--paper);font:700 28px/52px var(--serif);text-align:center}
+.s3 .num.red{background:var(--red)}
+.s3 .sh{font:700 34px/1.15 var(--serif);margin-top:16px}
+.s3 .sb{font:24px/1.35 var(--sans);color:var(--ink2);margin-top:16px;max-width:480px}
+.s3 .mini{margin-top:18px;height:300px}
+.s3 .ph.sm{width:250px;height:300px;padding:50px 22px 22px;border-radius:38px}
+.s3 .ph.sm .big{font-size:28px}
+.s3 .cam.sm{height:90px;margin:10px 0}
+.s3 .ph.sm.b .big{font-size:22px}
+.arrow3{font:700 64px/1 var(--serif);color:var(--mute);padding-top:230px;text-align:center}
+.callpill{display:inline-block;font:18px/1 var(--mono);background:var(--green);color:#fff;border-radius:999px;padding:8px 12px;margin-bottom:14px}
+.callpill.off{background:none;color:var(--mute);border:2px dashed var(--mute)}
+.chip.green{color:var(--green)}
+.more{position:absolute;left:120px;right:120px;bottom:118px;border-top:3px solid var(--ink);padding-top:22px;font:26px/1.35 var(--sans);color:var(--ink2)}
+.more b{font-family:var(--serif);color:var(--ink)}
+
 /* 4 ruler */
 .ruler{position:relative;margin:70px 0 0;height:300px}
 .ruler .bar{position:absolute;left:0;right:0;top:120px;height:26px;display:flex}
@@ -235,32 +254,37 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
 <!-- 3 -->
 <section class="slide">
   <div class="kicker">Почему этого мало</div>
-  <h2>Переводы во время звонка уже блокируют. Мошенники берут второй телефон.</h2>
-  <div class="phones">
-    <div>
-      <div class="ph">
-        <div class="t">приложение банка</div>
-        <div class="big">Перевод<br>850&nbsp;000&nbsp;₸</div>
-        <div class="chip">звонка нет</div>
-        <div class="chip red" style="margin-top:14px">блокировка молчит</div>
+  <h2>Защиту от звонков ввели. Мошенники её обходят.</h2>
+  <div class="s3">
+    <div class="st">
+      <div class="num">1</div>
+      <div class="sh">Как защищают сейчас</div>
+      <div class="mini">
+        <div class="ph sm"><div class="t">приложение банка</div><div class="callpill">идёт звонок</div><div class="big">Перевод</div><div class="chip green">заблокирован</div></div>
       </div>
-      <div class="cap">телефон № 1</div>
+      <div class="sb">Если во время перевода идёт звонок, приложение банка блокирует перевод.</div>
     </div>
-    <div>
-      <div class="ph b">
-        <div class="t">видеозвонок</div>
-        <div class="cam"></div>
-        <div class="big">«Служба безопасности»</div>
+    <div class="arrow3">→</div>
+    <div class="st">
+      <div class="num">2</div>
+      <div class="sh">Как обходят</div>
+      <div class="mini">
+        <div class="ph sm b"><div class="t">второй телефон</div><div class="cam sm"></div><div class="big">«Служба безопасности» по видео</div></div>
       </div>
-      <div class="cap">телефон № 2 — такую схему описывали в августе 2026 (Finratings.kz)</div>
+      <div class="sb">Мошенник звонит на <b>другой</b> телефон по видео и диктует, что нажимать.</div>
     </div>
-    <div class="defs">
-      <div class="d"><div class="h"><span class="strike">Блок при звонке</span></div><div class="b">видит звонок только на этом же телефоне</div></div>
-      <div class="d"><div class="h"><span class="strike">Чёрный список АФЦ</span></div><div class="b">дроп попадает туда после жалоб — когда деньги уже ушли</div></div>
-      <div class="d"><div class="h"><span class="strike">«Блок или пропуск»</span></div><div class="b">либо пропускает обман, либо злит честных клиентов</div></div>
+    <div class="arrow3">→</div>
+    <div class="st">
+      <div class="num red">3</div>
+      <div class="sh red">Что получается</div>
+      <div class="mini">
+        <div class="ph sm"><div class="t">приложение банка</div><div class="callpill off">звонка нет</div><div class="big">Перевод 850&nbsp;000&nbsp;₸</div><div class="chip red">ушёл мошеннику</div></div>
+      </div>
+      <div class="sb">На телефоне с банком звонка нет. Для защиты всё чисто — деньги уходят.</div>
     </div>
   </div>
-  <div class="folio"><span>03</span><span>Требование о блокировке известно из СМИ (ноябрь 2025), текст акта мы не нашли</span></div>
+  <div class="more"><b>И ещё две дыры:</b> чёрный список Антифрод-центра пополняется после жалоб, когда деньги уже ушли; а правило «блок или пропуск» не отличает обман от честной крупной покупки.</div>
+  <div class="folio"><span>03</span><span>Блокировка при звонке — по СМИ (ноябрь 2025); схема со вторым телефоном — Finratings.kz, 18.08.2026</span></div>
 </section>
 
 <!-- 4 -->
