@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Final
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TrustedContact(BaseModel):
@@ -47,6 +47,8 @@ class RecipientProfile(BaseModel):
 
 
 class SessionSignals(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     on_call: bool = Field(default=False, description="Во время перевода идёт телефонный звонок.")
     caller_unknown: bool = Field(default=False, description="Звонящего нет в контактах.")
     call_minutes: int = Field(default=0, ge=0, le=600)

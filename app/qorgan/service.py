@@ -67,13 +67,32 @@ def _save(doc: dict[str, Any]) -> dict[str, Any]:
 
 
 def available_balance(client_id: str) -> int:
-    """Profile balance minus transfers executed in this demo (synthetic history is already in the profile)."""
+    """Profile balance minus money sent or reserved in this demo.
+
+    Held transfers reserve their amount: otherwise a release by the analyst could overdraw the account.
+    Synthetic history is already reflected in the profile balance.
+    """
     spent: int = sum(
         int(d["amount"])
         for d in store.all_docs("transfers")
-        if d["client_id"] == client_id and d["status"] == "executed" and not d.get("synthetic_history")
+        if d["client_id"] == client_id and d["status"] in ("executed", "held") and not d.get("synthetic_history")
     )
     return get_client(client_id).balance - spent
+
+
+def _recent_to_recipient(client_id: str, recipient_id: str) -> tuple[int, int]:
+    """(count, sum) of this client's live transfers to this recipient in the last 24 h — catches splitting."""
+    since = _iso(_now() - timedelta(hours=24))
+    docs = [
+        d
+        for d in store.all_docs("transfers")
+        if d["client_id"] == client_id
+        and d["recipient_id"] == recipient_id
+        and not d.get("synthetic_history")
+        and d["created_at"] >= since
+        and d["status"] not in ("cancelled_by_client", "rejected", "blocked")
+    ]
+    return len(docs), sum(int(d["amount"]) for d in docs)
 
 
 def balances() -> dict[str, int]:
@@ -81,9 +100,12 @@ def balances() -> dict[str, int]:
 
 
 def create_transfer(req: TransferRequest, idempotency_key: str | None = None) -> dict[str, Any]:
+    fingerprint = req.model_dump_json()
     if idempotency_key:
         seen = store.get("idempotency", idempotency_key)
         if seen is not None:  # retried request: return the same transfer, never a second one
+            if seen.get("request") != fingerprint:
+                raise FlowError("Этот Idempotency-Key уже использован для другого перевода")
             return _load(seen["transfer_id"])
     if req.client_id not in CLIENTS:
         raise NotFoundError(req.client_id)
@@ -94,8 +116,11 @@ def create_transfer(req: TransferRequest, idempotency_key: str | None = None) ->
     if req.amount > balance:
         raise FlowError(f"Недостаточно средств: доступно {balance} ₸")
     stoplisted = store.get("stoplist", recipient.id) is not None
-    assessment = assess(req, client, recipient, balance=balance, stoplisted=stoplisted)
+    recent = _recent_to_recipient(client.id, recipient.id)
+    assessment = assess(req, client, recipient, balance=balance, stoplisted=stoplisted, recent_to_recipient=recent)
     status = {"allow": "executed", "warn": "awaiting_confirmation", "safety_check": "awaiting_answer"}[assessment.level]
+    if req.session.remote_access_app:  # mandatory rule (ARDFM, per media): no transfers under remote control
+        status = "blocked"
     doc: dict[str, Any] = {
         "id": "T-" + uuid.uuid4().hex[:8].upper(),
         "created_at": _iso(_now()),
@@ -121,9 +146,12 @@ def create_transfer(req: TransferRequest, idempotency_key: str | None = None) ->
         _event(doc, "система", "Получатель похож на дроп — перевод проверит специалист при любом ответе")
     if status == "executed":
         _event(doc, "система", "Перевод выполнен без дополнительных проверок")
+    if status == "blocked":
+        _event(doc, "система", "Перевод заблокирован: на телефоне активно приложение удалённого доступа")
     _save(doc)
     if idempotency_key:
-        store.put("idempotency", idempotency_key, doc["created_at"], {"transfer_id": doc["id"]})
+        entry = {"transfer_id": doc["id"], "request": fingerprint}
+        store.put("idempotency", idempotency_key, doc["created_at"], entry)
     return doc
 
 
@@ -144,6 +172,9 @@ def confirm(transfer_id: str) -> dict[str, Any]:
     doc = _load(transfer_id)
     if doc["status"] != "awaiting_confirmation":
         raise FlowError(f"Подтверждение недоступно в статусе {doc['status']}")
+    balance = available_balance(doc["client_id"])
+    if doc["amount"] > balance:
+        raise FlowError(f"Недостаточно средств: доступно {balance} ₸")
     doc["status"] = "executed"
     _event(doc, "клиент", "Клиент подтвердил перевод после предупреждения")
     return _save(doc)
@@ -159,7 +190,7 @@ def cancel(transfer_id: str) -> dict[str, Any]:
     return _save(doc)
 
 
-async def answer_safety_check(transfer_id: str, answer: str) -> dict[str, Any]:
+async def answer_safety_check(transfer_id: str, answer: str, instructed: bool = False) -> dict[str, Any]:
     doc = _load(transfer_id)
     if doc["status"] != "awaiting_answer":
         raise FlowError(f"Проверка недоступна в статусе {doc['status']}")
@@ -169,9 +200,12 @@ async def answer_safety_check(transfer_id: str, answer: str) -> dict[str, Any]:
     )
     result = await task.run(payload)
     verdict: ScamScriptOutput = result.output
-    decision, why = decide_after_check(doc["assessment"]["score"], verdict, bool(doc["assessment"].get("mule_pattern")))
+    decision, why = decide_after_check(
+        doc["assessment"]["score"], verdict, bool(doc["assessment"].get("mule_pattern")), instructed
+    )
     doc["check"] = {
         "answer": answer,
+        "instructed": instructed,
         "verdict": verdict.model_dump(),
         "script_title": SCRIPT_TITLES[verdict.script],
         "advice": CLIENT_ADVICE[verdict.script],
@@ -206,8 +240,7 @@ def _hold(doc: dict[str, Any], why: str) -> None:
             "client_id": client.id,
             "client_name": client.name,
             "contact": client.trusted_contact.model_dump(),
-            "amount": doc["amount"],
-            "recipient_name": doc["recipient_name"],
+            # Banking secrecy: no amount and no recipient — only the fact of the hold and the scheme.
             "script_title": (
                 check.get("script_title")
                 if (check.get("verdict") or {}).get("script") not in (None, "none")
@@ -318,7 +351,7 @@ def metrics() -> Metrics:
         level, status = d["assessment"]["level"], d["status"]
         by_level[level] = by_level.get(level, 0) + 1
         by_status[status] = by_status.get(status, 0) + 1
-        if level != "allow" and status in ("rejected", "cancelled_by_client"):
+        if level != "allow" and status in ("rejected", "cancelled_by_client", "blocked"):
             prevented_count += 1
             prevented_amount += d["amount"]
         if (d.get("analyst") or {}).get("decision") == "false_positive":

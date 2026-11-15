@@ -346,3 +346,67 @@ def test_honest_big_purchase_only_warns(api: TestClient) -> None:
     t = _send(api, "honest_big")
     assert t["status"] == "awaiting_confirmation" and t["assessment"]["level"] == "warn"
     assert api.post(f"/api/transfers/{t['id']}/confirm").json()["status"] == "executed"
+
+
+# --- fixes after independent judges ------------------------------------------------------------------
+
+
+def test_released_hold_cannot_overdraw_the_account(api: TestClient) -> None:
+    t = _send(api, "fake_security")
+    t = api.post(f"/api/transfers/{t['id']}/answer", json={"answer": SC["fake_security"].suggested_answer}).json()
+    assert t["status"] == "held"
+    # 850 000 is reserved, so 1 000 000 to mom no longer fits into 1 240 000
+    big = api.post("/api/transfers", json={"client_id": "saule", "recipient_id": "mom", "amount": 1_000_000})
+    assert big.status_code == 409
+    api.post(f"/api/cases/{t['id']}/decision", json={"decision": "release"})
+    assert api.get("/api/balances").json()["saule"] == 1_240_000 - 850_000
+
+
+def test_splitting_into_small_transfers_is_caught(api: TestClient) -> None:
+    body = {"client_id": "saule", "recipient_id": "relative_new", "amount": 60_000,
+            "session": {"on_call": True, "caller_unknown": True}}  # fmt: skip
+    levels = []
+    for _ in range(4):
+        t = api.post("/api/transfers", json=body).json()
+        levels.append(t["assessment"]["level"])
+        if t["status"] == "awaiting_confirmation":
+            api.post(f"/api/transfers/{t['id']}/confirm")
+    assert levels[0] != "safety_check" and "safety_check" in levels[1:]
+
+
+def test_brush_off_answer_is_held(api: TestClient) -> None:
+    t = _send(api, "relative_kz")  # not a mule, score < 80: only the answer decides
+    t = api.post(f"/api/transfers/{t['id']}/answer", json={"answer": "ok"}).json()
+    assert t["status"] == "held"
+
+
+def test_someone_instructing_means_hold(api: TestClient) -> None:
+    t = _send(api, "relative_kz")
+    body = {"answer": "Отдаю долг другу за ремонт", "someone_instructing": True}
+    t = api.post(f"/api/transfers/{t['id']}/answer", json=body).json()
+    assert t["status"] == "held"
+
+
+def test_idempotency_key_reused_for_another_transfer_is_rejected(api: TestClient) -> None:
+    h = {"Idempotency-Key": "k-1"}
+    api.post("/api/transfers", json={"client_id": "saule", "recipient_id": "grandson", "amount": 15_000}, headers=h)
+    other = api.post("/api/transfers", json={"client_id": "saule", "recipient_id": "mom", "amount": 99_000}, headers=h)
+    assert other.status_code == 409
+
+
+def test_remote_access_is_a_hard_block(api: TestClient) -> None:
+    body = {"client_id": "saule", "recipient_id": "grandson", "amount": 15_000, "session": {"remote_access_app": True}}
+    assert api.post("/api/transfers", json=body).json()["status"] == "blocked"
+
+
+def test_trusted_alert_keeps_banking_secrecy(api: TestClient) -> None:
+    t = _send(api, "fake_security")
+    api.post(f"/api/transfers/{t['id']}/answer", json={"answer": SC["fake_security"].suggested_answer})
+    alert = api.get("/api/alerts").json()[0]
+    assert "amount" not in alert and "recipient_name" not in alert
+
+
+@pytest.mark.parametrize("amount", [True, "100", 1.5])
+def test_amount_must_be_a_real_integer(api: TestClient, amount: object) -> None:
+    body = {"client_id": "saule", "recipient_id": "grandson", "amount": amount}
+    assert api.post("/api/transfers", json=body).status_code == 422

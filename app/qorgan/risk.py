@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Final, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.qorgan.bank_sim import ClientProfile, RecipientProfile, SessionSignals
 
@@ -41,9 +41,11 @@ class RiskAssessment(BaseModel):
 
 
 class TransferRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     client_id: str
     recipient_id: str
-    amount: int = Field(gt=0, le=50_000_000, description="Сумма перевода, ₸.")
+    amount: int = Field(gt=0, le=50_000_000, strict=True, description="Сумма перевода, ₸.")
     purpose: str = Field(default="", max_length=200)
     session: SessionSignals = Field(default_factory=SessionSignals)
 
@@ -62,6 +64,7 @@ def assess(
     *,
     balance: int | None = None,
     stoplisted: bool = False,
+    recent_to_recipient: tuple[int, int] = (0, 0),
 ) -> RiskAssessment:
     """`balance` — current available balance (defaults to the profile); `stoplisted` — recipient was
     rejected by an analyst earlier (bank's own stop-list)."""
@@ -89,15 +92,19 @@ def assess(
         add("night", "session", 5, "Нетипичное время — ночь")
 
     # --- Amount vs the client's own behaviour -------------------------------------------------
-    if req.amount > max(client.max_transfer_90d, 3 * client.avg_transfer_90d):
-        ratio = req.amount / max(client.avg_transfer_90d, 1)
+    # Splitting a big transfer into small ones must not dodge the check: the last 24 h of transfers
+    # to the same (new) recipient are added to this one.
+    recent_count, recent_sum = recent_to_recipient
+    total = req.amount + recent_sum
+    if total > max(client.max_transfer_90d, 3 * client.avg_transfer_90d):
+        ratio = total / max(client.avg_transfer_90d, 1)
         add(
             "amount_spike",
             "amount",
             15,
             f"Сумма в {ratio:.0f} раз больше обычного перевода ({_fmt(client.avg_transfer_90d)})",
         )
-    share = req.amount / max(client.balance if balance is None else balance, 1)
+    share = total / max((client.balance if balance is None else balance) + recent_sum, 1)
     if share >= 0.6:
         add("drains_balance", "amount", 15, f"Переводится {share:.0%} всех средств на счёте")
 
@@ -108,6 +115,13 @@ def assess(
         add("recipient_blacklisted", "recipient", 40, f"Счёт получателя в {where}")
     if prior == 0:
         add("new_recipient", "recipient", 10, "Первый перевод этому получателю")
+        if recent_count >= 1:
+            add(
+                "split_transfers",
+                "amount",
+                15,
+                f"Уже {recent_count} перевод(а) этому новому получателю за сутки, вместе с этим — {_fmt(total)}",
+            )
     if recipient.account_age_days < 30:
         add("young_account", "recipient", 10, f"Счёт получателя открыт {recipient.account_age_days} дн. назад")
     if recipient.unique_senders_24h >= 10:

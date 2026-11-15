@@ -17,6 +17,9 @@ router = APIRouter(prefix="/api", tags=["Qorgan"])
 
 class AnswerBody(BaseModel):
     answer: str = Field(min_length=1, max_length=1500)
+    someone_instructing: bool = Field(
+        default=False, description="Ответ «да» на вопрос «Вам сейчас кто-то говорит, что нажимать?»"
+    )
 
     @field_validator("answer")
     @classmethod
@@ -105,7 +108,7 @@ async def cancel(transfer_id: str) -> dict[str, Any]:
 @router.post("/transfers/{transfer_id}/answer")
 async def answer(transfer_id: str, body: AnswerBody) -> dict[str, Any]:
     try:
-        return await service.answer_safety_check(transfer_id, body.answer)
+        return await service.answer_safety_check(transfer_id, body.answer, body.someone_instructing)
     except service.NotFoundError as exc:
         raise HTTPException(status_code=404, detail=f"Не найдено: {exc.args[0]}") from None
     except service.FlowError as exc:

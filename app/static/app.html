@@ -79,6 +79,11 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .spinner{width:36px;height:36px;border:4px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .row{display:flex;gap:8px}
+.quick{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chipbtn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 10px;font-size:13px}
+.chipbtn:hover{border-color:var(--brand)}
+.q2{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
+.seg{display:flex;gap:4px}.seg .btn.on{background:var(--danger);color:#fff;border-color:var(--danger)}
 .row>*{flex:1}
 
 .push{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
@@ -205,7 +210,14 @@ const ICON = {
   pause: '<svg viewBox="0 0 48 48" class="ico bad"><circle cx="24" cy="24" r="21"/><path d="M19 15v18M29 15v18"/></svg>',
   err: '<svg viewBox="0 0 48 48" class="ico bad"><circle cx="24" cy="24" r="21"/><path d="M24 13v14M24 33v1"/></svg>',
 };
-const STATUS = {executed:'выполнен', awaiting_confirmation:'ждёт подтверждения', awaiting_answer:'проверка', held:'задержан', cancelled_by_client:'отменён клиентом', rejected:'отклонён'};
+const QUICK = [
+  ['Звонили из банка или полиции', 'Мне позвонили из банка или полиции и сказали перевести деньги'],
+  ['Родственник в беде', 'Родственник попал в беду, просят срочно перевести деньги'],
+  ['Покупка или предоплата', 'Плачу продавцу предоплату за покупку'],
+  ['Инвестиции или заработок', 'Пополняю счёт на платформе, чтобы получить доход'],
+  ['Родным или по долгу, сам решил', 'Перевожу своим родным, сам так решил, никто не просил'],
+];
+const STATUS = {executed:'выполнен', awaiting_confirmation:'ждёт подтверждения', awaiting_answer:'проверка', held:'задержан', cancelled_by_client:'отменён клиентом', rejected:'отклонён', blocked:'заблокирован'};
 const GROUP = {session:'сессия', amount:'сумма', recipient:'получатель', history:'история'};
 
 const S = {balances:{}, state:null, scenario:null, transfer:null, view:'form', busy:false, selected:null, cases:[], alerts:[], metrics:null};
@@ -283,11 +295,20 @@ function renderClient() {
     el.innerHTML = `<div class="card danger"><h3><span class="mark"></span>Остановитесь на минуту</h3>
       <div>Этот перевод похож на мошенническую схему:</div>${reasonsList}
       <div><b>Сотрудники банка и полиции никогда не просят переводить деньги.</b></div></div>
-      <label class="field">Расскажите своими словами: зачем вы переводите эти деньги и кто вас попросил?
-        <textarea id="answer" maxlength="1500" placeholder="Например: маме на лекарства"></textarea></label>
+      <div class="q2"><b>Вам сейчас кто-то говорит, что нажимать?</b>
+        <div class="seg" id="instr"><button class="btn small" data-instr="1">Да</button><button class="btn small" data-instr="0">Нет</button></div></div>
+      <div class="field">Зачем вы переводите и кто попросил? Выберите или напишите своими словами
+        <div class="quick">${QUICK.map((q, i) => `<button class="chipbtn" data-quick="${i}">${esc(q[0])}</button>`).join('')}</div>
+        <textarea id="answer" maxlength="1500" placeholder="Например: маме на лекарства"></textarea></div>
       ${S.scenario?.suggested_answer ? `<button class="btn small ghost" id="fillBtn" title="Демо: вставить ответ из сценария">↳ вставить ответ из сценария</button>` : ''}
       <div class="row"><button class="btn" id="cancelBtn">Отменить перевод</button><button class="btn primary" id="answerBtn">Отправить</button></div>`;
     if ($('#fillBtn')) $('#fillBtn').onclick = () => { $('#answer').value = S.scenario.suggested_answer; };
+    S.instructed = false;
+    document.querySelectorAll('[data-instr]').forEach(b => b.onclick = () => {
+      S.instructed = b.dataset.instr === '1';
+      document.querySelectorAll('[data-instr]').forEach(x => x.classList.toggle('on', x === b));
+    });
+    document.querySelectorAll('[data-quick]').forEach(b => b.onclick = () => { $('#answer').value = QUICK[+b.dataset.quick][1]; });
     $('#answerBtn').onclick = submitAnswer;
   } else if (t.status === 'held') {
     const ch = t.check, c2 = client();
@@ -297,6 +318,8 @@ function renderClient() {
       ${c2.trusted_contact ? `<div class="card info"><div>Мы сообщили вашему доверенному лицу: <b>${esc(c2.trusted_contact.name)}</b> (${esc(c2.trusted_contact.relation)}).</div></div>` : ''}
       <div class="card info"><div><b>Положите трубку.</b> Специалист банка перезвонит с номера, указанного на вашей карте. По закону банк может держать перевод до 5 рабочих дней.</div></div>
       <button class="btn block" id="cancelBtn">Отменить перевод</button>`;
+  } else if (t.status === 'blocked') {
+    el.innerHTML = `<div class="center">${ICON.err}<h2>Перевод заблокирован</h2><div>На телефоне работает приложение удалённого доступа. Если его установили по просьбе «сотрудника банка» — это мошенники.</div><div class="muted">Удалите приложение и позвоните в банк по номеру на карте.</div><button class="btn ghost" id="newBtn">Новый перевод</button></div>`;
   } else if (t.status === 'cancelled_by_client') {
     el.innerHTML = `<div class="center">${ICON.shield}<h2>Перевод отменён</h2><div>${fmt(t.amount)} остались на вашем счёте.</div><button class="btn ghost" id="newBtn">Новый перевод</button></div>`;
   } else if (t.status === 'rejected') {
@@ -322,7 +345,7 @@ async function submitAnswer() {
   const answer = $('#answer').value.trim();
   if (!answer) { toast('Напишите пару слов о цели перевода'); return; }
   S.busy = true; renderClient();
-  try { S.transfer = await api(`/api/transfers/${S.transfer.id}/answer`, {method: 'POST', body: JSON.stringify({answer})}); }
+  try { S.transfer = await api(`/api/transfers/${S.transfer.id}/answer`, {method: 'POST', body: JSON.stringify({answer, someone_instructing: !!S.instructed})}); }
   catch (e) { toast('Ошибка: ' + e.message); }
   finally { S.busy = false; renderClient(); refresh(); }
 }
@@ -345,9 +368,12 @@ function renderTrusted() {
       <div class="push ${a.status === 'new' ? 'new' : ''}">
         <div class="head"><span><span class="mark" style="color:var(--brand)"></span>Банк · Qorgan</span><span>${time(a.created_at)}</span></div>
         <div><b>${esc(a.client_name.split(' ')[0])}, возможно, общается с мошенниками</b></div>
-        <div>Задержан перевод ${fmt(a.amount)} → ${esc(a.recipient_name)}${a.on_call ? ' (во время телефонного звонка)' : ''}</div>
+        <div>Банк задержал подозрительный перевод${a.on_call ? ', сделанный во время телефонного звонка' : ''}. Сумму и получателя мы не показываем — это банковская тайна.</div>
         ${a.script_title ? `<div class="muted">Похоже на: ${esc(a.script_title)}</div>` : ''}
-        ${a.status === 'new' ? `<div class="row"><button class="btn danger small" data-alert="${a.id}" data-r="scam">Это мошенники</button><button class="btn small" data-alert="${a.id}" data-r="ok">Я в курсе, всё нормально</button></div>`
+        ${a.status === 'new' ? `<button class="btn primary small" data-callmom="${a.id}">Позвонить ${esc(a.client_name.split(' ')[0])} на её номер</button>
+          <div class="muted" style="font-size:12px">Если ей сейчас звонят мошенники на другой телефон, ваш звонок прервёт разговор.</div>
+          <div class="row"><button class="btn danger small" data-alert="${a.id}" data-r="scam">Это мошенники</button><button class="btn small" data-alert="${a.id}" data-r="ok">Я в курсе, всё нормально</button></div>
+          <div class="muted" style="font-size:12px">Ваш ответ увидит специалист банка. Решение о переводе принимает банк.</div>`
           : `<div class="muted">${a.status === 'closed' ? 'Вопрос решён: ' + esc(a.closed_reason || 'перевод проверен') : 'Ваш ответ: ' + (a.status === 'scam' ? '«это мошенники» — банк не выпустит перевод без проверки' : '«всё нормально» — передано специалисту')}</div>`}
       </div>`).join('') : `<div class="empty">Уведомлений нет.<br>Они появятся, если банк задержит подозрительный перевод ${esc(c.name.split(' ')[0])}.</div>`);
 }
@@ -395,6 +421,7 @@ function renderDetail() {
           <div class="kv"><span>Сценарий</span><b class="${ch.verdict.script !== 'none' ? 'flag' : ''}">${esc(ch.script_title)}</b></div>
           <div class="kv"><span>Уверенность</span><b>${Math.round(ch.verdict.confidence * 100)}%</b></div>
           ${ch.verdict.signals.length ? `<div>Признаки: ${ch.verdict.signals.map(esc).join('; ')}</div>` : ''}
+          ${ch.instructed ? '<div class="flag">Клиент ответил: «да, мне сейчас говорят, что нажимать»</div>' : ''}
           <div class="muted">${esc(ch.verdict.analyst_note)}</div>
           <div class="muted">Источник: ${ch.source === 'llm' ? 'LLM' : ch.source === 'cache' ? 'LLM (кэш)' : ch.source === 'mock' ? 'офлайн-классификатор (без LLM)' : 'офлайн-классификатор (LLM недоступна)'} · решение: ${esc(ch.decision_reason)}</div>`
           : '<div class="muted">Проверочный диалог не проводился.</div>'}
@@ -405,7 +432,7 @@ function renderDetail() {
           <div class="kv"><span>Вывод средств за 24 ч</span><b class="${r.cash_out_ratio_24h >= 0.8 ? 'flag' : ''}">${Math.round(r.cash_out_ratio_24h * 100)}%</b></div>
           <div class="kv"><span>В стоп-листе / базе АФЦ</span><b class="${(S.stoplist||[]).includes(r.id) || r.in_antifraud_db ? 'flag' : ''}">${(S.stoplist||[]).includes(r.id) ? 'да, стоп-лист банка' : r.in_antifraud_db ? 'да' : 'нет'}</b></div>
           ${a.mule_pattern ? '<div class="flag">Похож на дроп: задержка при любом ответе клиента</div>' : ''}
-          <div class="sim">В проде — данные core banking и обмена с Антифрод-центром НБРК. Здесь — симулятор.</div>` : ''}
+          <div class="sim">${r.bank === 'Банк ЦентрКредит' ? 'Получатель — клиент BCC: в проде эти поля банк видит сам (core banking).' : 'Получатель в другом банке: в проде эти поля доступны только через межбанковый обмен с Антифрод-центром НБРК — это наше предложение для пилота. Без него решение держится на сессии, ответе клиента и чёрном списке.'} Здесь — симулятор.</div>` : ''}
         <div class="kv"><span>Доверенное лицо</span><b class="${c.trusted_response === 'scam' ? 'flag' : ''}">${c.trusted_response === 'scam' ? 'считает, что мошенники' : c.trusted_response === 'ok' ? 'подтверждает перевод' : c.alert_id ? 'ещё не ответило' : 'нет'}</b></div>
       </div>
     </div>
@@ -420,6 +447,8 @@ function renderDetail() {
 // ---------- events & polling ----------
 document.addEventListener('click', async (ev) => {
   const sc = ev.target.closest('[data-sc]'); if (sc) return applyScenario(sc.dataset.sc);
+  const cm = ev.target.closest('[data-callmom]');
+  if (cm) { toast('Симуляция: звоним на основной номер клиента. Банк тоже перезвонит ей с официального номера.'); return; }
   const al = ev.target.closest('[data-alert]');
   if (al) { await act(`/api/alerts/${al.dataset.alert}/respond`, {response: al.dataset.r}); return; }
   const qi = ev.target.closest('[data-case]'); if (qi) { S.selected = qi.dataset.case; renderQueue(); renderDetail(); return; }
