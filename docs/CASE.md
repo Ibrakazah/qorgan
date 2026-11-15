@@ -66,7 +66,7 @@
 |---|---|
 | «соответствовать FINTECH CASE» | `docs/SPEC.md`, раздел «Соответствие кейсу» |
 | «описание проекта» | `docs/submission/DESCRIPTION.md` |
-| «презентацию» | `docs/submission/Qorgan_pitch.pptx` + `docs/submission/SPEECH.md` |
+| «презентацию» | `docs/submission/Qorgan_pitch.pdf` / `.pptx` + `docs/submission/SPEECH.md` |
 | «MVP/прототип» | приложение в этом репозитории, запуск по README |
 | «демонстрационные материалы и ссылки на репозитории» | `docs/submission/DEMO_SCRIPT.md`, видео/GIF в `docs/media/` |
 | «5 / 3 / 2 минуты» | `SPEECH.md` с таймингом, `DEMO_SCRIPT.md` на 3:00, `JURY_QA.md` |

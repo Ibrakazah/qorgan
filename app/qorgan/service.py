@@ -208,7 +208,13 @@ def _hold(doc: dict[str, Any], why: str) -> None:
             "contact": client.trusted_contact.model_dump(),
             "amount": doc["amount"],
             "recipient_name": doc["recipient_name"],
-            "script_title": check.get("script_title"),
+            "script_title": (
+                check.get("script_title")
+                if (check.get("verdict") or {}).get("script") not in (None, "none")
+                else "перевод на счёт, похожий на «дроп»"
+                if doc["assessment"].get("mule_pattern")
+                else None
+            ),
             "on_call": doc["session"]["on_call"],
             "status": "new",
             "responded_at": None,

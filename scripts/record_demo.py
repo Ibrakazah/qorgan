@@ -52,21 +52,35 @@ class Demo:
         if left > 0:
             self.page.wait_for_timeout(int(left * 1000))
 
-    def shot(self, name: str) -> None:
-        self.page.screenshot(path=str(MEDIA / f"shot_{name}.png"))
+    def shot(self, name: str, element: str | None = None) -> None:
+        """Clean screenshot (caption hidden) of the page or of one element."""
+        self.page.evaluate(
+            "() => { const c = document.getElementById('__cap'); if (c) c.style.visibility = 'hidden';"
+            " document.querySelector('.top').style.position = 'static'; }"
+        )
+        target = self.page.locator(element).first if element else self.page
+        target.screenshot(path=str(MEDIA / f"shot_{name}.png"))
+        self.page.evaluate(
+            "() => { const c = document.getElementById('__cap'); if (c) c.style.visibility = '';"
+            " document.querySelector('.top').style.position = ''; }"
+        )
 
 
-def run(base: str, fast: bool) -> None:
+def run(base: str, fast: bool, stills: bool = False) -> None:
     MEDIA.mkdir(parents=True, exist_ok=True)
+    video = (
+        {}
+        if stills
+        else {"record_video_dir": str(MEDIA / "_raw"), "record_video_size": {"width": 1600, "height": 1000}}
+    )
     with sync_playwright() as p:
         browser = p.chromium.launch()
         ctx = browser.new_context(
             viewport={"width": 1600, "height": 1000},
-            device_scale_factor=1,
-            record_video_dir=str(MEDIA / "_raw"),
-            record_video_size={"width": 1600, "height": 1000},
+            device_scale_factor=2 if stills else 1,
             locale="ru-RU",
             color_scheme="light",
+            **video,  # type: ignore[arg-type]
         )
         page = ctx.new_page()
         page.request.post(f"{base}/api/demo/reset")
@@ -92,7 +106,7 @@ def run(base: str, fast: bool) -> None:
         d.until(50)
         page.click("#sendBtn")
         page.wait_for_selector("text=Остановитесь на минуту")
-        d.cap("Но риск 70/100: сумма в 39 раз больше обычной, новый получатель, 43 отправителя за сутки")
+        d.cap("Но риск 75/100: сумма в 39 раз больше обычной, а получатель похож на дроп — 43 отправителя за сутки")
         d.shot("safety_check")
         d.until(70)
 
@@ -101,8 +115,12 @@ def run(base: str, fast: bool) -> None:
         d.until(80)
         page.click("#answerBtn")
         page.wait_for_selector("text=Перевод задержан")
-        d.cap("ИИ узнал схему «служба безопасности банка» → перевод задержан, клиенту объяснили обман")
+        d.cap(
+            "ИИ узнал схему «служба безопасности банка». Перевод задержан — и задержался бы, даже если бы она соврала"
+        )
         d.shot("held")
+        d.shot("client_held", 'section[aria-label="Приложение клиента"] .phone')
+        d.shot("trusted_alert", 'section[aria-label="Доверенное лицо"] .phone')
         d.until(95)
 
         page.click('[data-r="scam"]')
@@ -114,6 +132,7 @@ def run(base: str, fast: bool) -> None:
         d.cap("Аналитик видит готовый кейс: из чего сложился балл, ответ клиента, вердикт ИИ")
         d.until(135)
         d.shot("analyst")
+        d.shot("analyst_case", "#detail")
         d.cap("Получатель — типичный дроп: счёт 5 дней, 43 отправителя за сутки, 97% денег сразу выведено")
         d.until(155)
 
@@ -126,7 +145,7 @@ def run(base: str, fast: bool) -> None:
         d.cap("Обычный перевод — ноль трения. Обман — остановлен. Это Qorgan.")
         d.until(180)
 
-        video_path = Path(page.video.path()) if page.video else None
+        video_path = Path(page.video.path()) if page.video and not stills else None
         ctx.close()
         browser.close()
 
@@ -148,5 +167,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://localhost:8000")
     ap.add_argument("--fast", action="store_true")
+    ap.add_argument("--stills", action="store_true", help="only screenshots (2x), no video; implies --fast")
     args = ap.parse_args()
-    run(args.base, args.fast)
+    run(args.base, args.fast or args.stills, args.stills)

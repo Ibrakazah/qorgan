@@ -21,10 +21,10 @@ ignore = ["RUF001", "RUF002", "RUF003"]  # Cyrillic text is intentional
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
-files = ["app", "evals", "ml", "scripts", "tests"]
+files = ["app", "evals", "scripts", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["scripts.build_deck", "scripts.record_demo"]  # media tooling (pptx/playwright lack stubs), not the product
+module = ["scripts.build_deck", "scripts.record_demo", "scripts.render_deck"]  # media tooling (pptx/playwright lack stubs), not the product
 ignore_errors = true
 
 [[tool.mypy.overrides]]
@@ -32,4 +32,4 @@ module = ["sklearn.*", "pandas.*", "pptx.*", "playwright.*"]
 ignore_missing_imports = true
 
 [tool.ruff.lint.per-file-ignores]
-"scripts/build_deck.py" = ["E501"]  # slide copy is long prose by design
+"scripts/record_demo.py" = ["E501"]  # on-screen captions are long prose by design

@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qorgan — питч</title>
+<!--
+  Исходник презентации. Править текст прямо здесь, затем `make deck`:
+  соберутся Qorgan_pitch.pdf, Qorgan_pitch.pptx и PNG слайдов.
+  Показ: открыть файл в браузере, стрелки ← → / пробел, F — полный экран.
+-->
+<style>
+:root{
+  --paper:#EEEAE1; --paper2:#E4DFD3; --ink:#121412; --ink2:#2A2D2A; --mute:#6E6A60;
+  --red:#D3261C; --green:#0E6B4A; --rule:#121412;
+  --serif:"PT Serif","Iowan Old Style",Georgia,serif;
+  --sans:"PT Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"PT Mono","SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#2b2b28}
+body{font-family:var(--sans);color:var(--ink)}
+.deck{display:flex;flex-direction:column;align-items:center;gap:40px;padding:40px 0}
+.slide{width:1920px;height:1080px;position:relative;overflow:hidden;background:var(--paper);flex:none;padding:96px 120px}
+.slide.dark{background:var(--ink);color:var(--paper)}
+.present .deck{display:block;padding:0}
+.present .slide{display:none;position:absolute;top:50%;left:50%;transform-origin:center}
+.present .slide.on{display:block}
+@media print{
+  @page{size:1920px 1080px;margin:0}
+  html,body{background:none}
+  .deck{display:block;padding:0}
+  .slide{page-break-after:always;break-after:page}
+}
+
+/* furniture */
+.folio{position:absolute;left:120px;right:120px;bottom:52px;display:flex;justify-content:space-between;font:20px/1 var(--mono);color:var(--mute);letter-spacing:.02em}
+.dark .folio{color:#8C887E}
+.kicker{font:22px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--red);margin-bottom:28px}
+.dark .kicker{color:#FF6A5C}
+h1,h2{font-family:var(--serif);font-weight:700;letter-spacing:-.01em}
+h2{font-size:64px;line-height:1.06;max-width:1560px}
+.lede{font:34px/1.35 var(--serif);max-width:1300px;margin-top:28px;color:var(--ink2)}
+.dark .lede{color:#CFCabd}
+.src{font:17px/1.4 var(--mono);color:var(--mute)}
+.red{color:var(--red)} .green{color:var(--green)}
+.strike{position:relative;display:inline-block}
+.strike::after{content:"";position:absolute;left:-2%;right:-2%;top:52%;height:.09em;background:var(--red);transform:rotate(-3deg)}
+hr.rule{border:0;border-top:3px solid var(--rule);margin:36px 0}
+.dark hr.rule{border-color:var(--paper)}
+
+/* 1 cover */
+.cover .case{font:22px/1.6 var(--mono);color:#8C887E;display:flex;gap:48px}
+.cover .amount{font:700 300px/1 var(--serif);letter-spacing:-.04em;margin-top:120px;color:var(--paper)}
+.cover .amount .t{font-size:.55em;vertical-align:.32em;margin-left:.06em}
+.cover .after{font:44px/1.25 var(--serif);margin-top:30px;max-width:1300px;color:#CFCabd}
+.cover .after b{color:var(--paper)}
+.cover .brand{position:absolute;right:120px;top:96px;text-align:right}
+.cover .brand .w{font:700 64px/1 var(--serif);color:var(--paper)}
+.cover .brand .kz{font:24px/1.4 var(--mono);color:#8C887E;margin-top:10px}
+.cover .mark{position:absolute;right:120px;bottom:120px;width:150px}
+
+/* 2 call log */
+.call{display:grid;grid-template-columns:1.2fr .8fr;gap:90px;margin-top:44px}
+.log{font:25px/1.4 var(--mono)}
+.log .row{display:grid;grid-template-columns:120px 1fr;padding:13px 0;border-top:2px solid var(--paper2)}
+.log .row:first-child{border-top:0}
+.log .ts{color:var(--mute)}
+.log .act{font-family:var(--sans);font-weight:700}
+.bank{border-left:6px solid var(--ink);padding-left:44px}
+.bank h3{font:22px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:26px}
+.bank p{font:34px/1.25 var(--serif);margin-bottom:12px}
+.bank .verdict{font:700 48px/1.1 var(--serif);margin-top:22px}
+.stats{position:absolute;left:120px;right:120px;bottom:118px;display:grid;grid-template-columns:repeat(3,1fr);gap:60px;border-top:3px solid var(--ink);padding-top:26px}
+.stats .n{font:700 64px/1 var(--serif)}
+.stats .l{font:24px/1.3 var(--sans);margin-top:10px;color:var(--ink2)}
+
+/* 3 two phones */
+.phones{display:flex;gap:80px;align-items:flex-end;margin-top:48px}
+.ph{width:300px;height:430px;border:5px solid var(--ink);border-radius:46px;position:relative;padding:60px 30px 30px;flex:none;background:var(--paper)}
+.ph::before{content:"";position:absolute;top:18px;left:50%;width:90px;height:12px;border-radius:8px;background:var(--ink);transform:translateX(-50%)}
+.ph .t{font:20px/1.3 var(--mono);color:var(--mute);margin-bottom:14px}
+.ph .big{font:700 34px/1.15 var(--serif)}
+.ph .chip{display:inline-block;font:20px/1 var(--mono);padding:10px 14px;border:2px solid currentColor;border-radius:999px;margin-top:22px}
+.ph.b{background:var(--ink);color:var(--paper)}
+.ph.b::before{background:var(--paper)}
+.ph.b .t{color:#8C887E}
+.ph .cam{width:100%;height:150px;border-radius:20px;background:repeating-linear-gradient(135deg,#2f322f 0 14px,#262826 14px 28px);margin:16px 0}
+.phones .cap{font:20px/1.35 var(--mono);color:var(--mute);margin-top:16px;width:300px;height:56px}
+.defs{flex:1;padding-bottom:72px;margin-left:20px}
+.defs .d{padding:18px 0;border-top:2px solid var(--ink)}
+.defs .d .h{font:700 36px/1.2 var(--serif)}
+.defs .d .b{font:26px/1.35 var(--sans);color:var(--ink2);margin-top:8px}
+
+/* 4 ruler */
+.ruler{position:relative;margin:70px 0 0;height:300px}
+.ruler .bar{position:absolute;left:0;right:0;top:120px;height:26px;display:flex}
+.ruler .bar span{height:100%}
+.ruler .ticks{position:absolute;left:0;right:0;top:156px;font:22px/1 var(--mono);color:var(--mute)}
+.ruler .ticks i{position:absolute;font-style:normal;transform:translateX(-50%)}
+.ruler .pin{position:absolute;top:0;transform:translateX(-50%);text-align:center;width:300px}
+.ruler .pin .lbl{font:24px/1.25 var(--sans);font-weight:700;height:84px;display:flex;flex-direction:column;justify-content:flex-end}
+.ruler .pin .lbl small{display:block;font:20px/1.2 var(--mono);font-weight:400;color:var(--mute)}
+.ruler .pin .stem{width:3px;height:44px;background:var(--ink);margin:6px auto 0}
+.ruler .pin.alt{top:178px}
+.ruler .pin.l{transform:none;text-align:left}.ruler .pin.l .stem{margin-left:0}
+.ruler .pin.r{transform:translateX(-100%);text-align:right}.ruler .pin.r .stem{margin-right:0}
+.ruler .pin.alt .stem{margin:0 auto 6px}
+.ruler .pin.alt .lbl{justify-content:flex-start}
+.zones{display:grid;grid-template-columns:30fr 25fr 45fr;margin-top:40px;border-top:3px solid var(--ink)}
+.zones div{padding:24px 28px 0 0}
+.zones .h{font:700 40px/1.1 var(--serif)}
+.zones .b{font:24px/1.35 var(--sans);color:var(--ink2);margin-top:10px;max-width:520px}
+
+/* 5 receipt */
+.receipt-wrap{display:grid;grid-template-columns:1fr 760px;gap:110px;align-items:start;margin-top:30px}
+.receipt{background:#FBF9F4;padding:54px 56px 150px;font:27px/1.5 var(--mono);position:relative;box-shadow:0 2px 0 var(--paper2);
+  -webkit-mask:linear-gradient(#000 0 0) top/100% calc(100% - 18px) no-repeat, radial-gradient(circle 12px at 12px 100%,transparent 11px,#000 12px) bottom left/24px 18px repeat-x;
+  mask:linear-gradient(#000 0 0) top/100% calc(100% - 18px) no-repeat, radial-gradient(circle 12px at 12px 100%,transparent 11px,#000 12px) bottom left/24px 18px repeat-x}
+.receipt .hd{text-align:center;color:var(--mute);font-size:22px;margin-bottom:24px;letter-spacing:.06em}
+.receipt .ln{display:flex;gap:12px;align-items:baseline}
+.receipt .ln .d{flex:1;border-bottom:3px dotted #B8B2A5;transform:translateY(-8px)}
+.receipt .ln b{font-weight:700;min-width:62px;text-align:right}
+.receipt .tot{border-top:3px dashed var(--ink);margin-top:22px;padding-top:18px;font-size:38px;font-weight:700}
+.receipt .stamp{position:absolute;right:56px;bottom:46px;transform:rotate(-7deg);border:5px solid var(--red);color:var(--red);font:700 46px/1 var(--mono);padding:14px 22px;letter-spacing:.06em;opacity:.9}
+.receipt .stamp small{display:block;font-size:19px;letter-spacing:.02em;margin-top:6px}
+
+/* 6 question */
+.quote{font:italic 58px/1.28 var(--serif);max-width:1500px;margin-top:40px;color:var(--paper)}
+.quote mark{background:none;color:#FF6A5C;font-style:italic}
+.verdictline{display:flex;gap:30px;align-items:center;margin-top:60px;font:30px/1 var(--mono)}
+.verdictline .arrow{font-size:46px;color:#8C887E}
+.verdictline .v{border:3px solid #FF6A5C;color:#FF6A5C;padding:16px 22px}
+.lie{position:absolute;left:120px;right:120px;bottom:120px;display:grid;grid-template-columns:1fr 1fr;gap:80px;border-top:3px solid var(--paper);padding-top:30px}
+.lie .q{font:700 40px/1.2 var(--serif)}
+.lie .a{font:28px/1.4 var(--sans);color:#CFCabd}
+
+/* 7 screens */
+.shots{display:grid;grid-template-columns:repeat(3,1fr);gap:48px;margin-top:40px}
+.shot .frame{height:560px;overflow:hidden;border:3px solid var(--ink);background:#fff}
+.shot .frame img{display:block;width:100%;height:100%;object-fit:cover;object-position:center top}
+.shot .frame.dk{background:var(--ink)} .shot .frame.dk img{object-position:center 4%}
+.shot .ts{font:20px/1 var(--mono);color:var(--red);margin-top:18px}
+.shot .who{font:700 30px/1.15 var(--serif);margin-top:8px}
+.shot .what{font:22px/1.3 var(--sans);color:var(--ink2);margin-top:6px}
+
+/* 8 matrix */
+table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(--sans)}
+.mx th{font:20px/1.25 var(--mono);text-transform:uppercase;letter-spacing:.04em;color:var(--mute);text-align:left;padding:0 18px 18px 0;vertical-align:bottom;font-weight:400}
+.mx th.us{color:var(--green);font-weight:700}
+.mx td{border-top:2px solid var(--ink);padding:14px 18px 14px 0}
+.mx td:first-child{font:700 28px/1.2 var(--serif);width:600px}
+.mx td.us{font-weight:700;color:var(--green)}
+.dot{display:inline-block;width:22px;height:22px;border-radius:50%;border:3px solid var(--ink);vertical-align:-3px}
+.dot.f{background:var(--ink)} .dot.h{background:linear-gradient(90deg,var(--ink) 50%,transparent 50%)}
+.us .dot{border-color:var(--green)} .us .dot.f{background:var(--green)}
+.legend{font:20px/1 var(--mono);color:var(--mute);margin-top:30px;display:flex;gap:40px}
+
+/* 9 build */
+.build{display:grid;grid-template-columns:1fr 1fr;gap:100px;margin-top:60px}
+.build h3{font:22px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;margin-bottom:24px}
+.build ul{list-style:none}
+.build li{font:30px/1.3 var(--sans);padding:16px 0;border-top:2px solid var(--paper2)}
+.build li b{font-family:var(--serif)}
+.pipe{display:flex;align-items:center;gap:0;margin-top:70px;font:24px/1.2 var(--mono)}
+.pipe span{border:3px solid var(--ink);padding:16px 20px;background:#FBF9F4}
+.pipe i{flex:1;height:3px;background:var(--ink);min-width:28px}
+.pipe span.ai{border-color:var(--red);color:var(--red)}
+
+/* 10 money */
+.formula{font:700 92px/1.1 var(--serif);margin-top:70px;letter-spacing:-.01em}
+.formula sub{font:28px/1 var(--mono);font-weight:400;color:var(--mute);vertical-align:-.2em;margin-left:4px}
+.vars{display:grid;grid-template-columns:repeat(4,1fr);gap:40px;margin-top:40px;font:24px/1.35 var(--sans);color:var(--ink2)}
+.vars b{display:block;font:700 34px/1.2 var(--serif);color:var(--ink)}
+.outs{display:grid;grid-template-columns:repeat(3,1fr) 1.15fr;gap:0;margin-top:70px;border-top:3px solid var(--ink)}
+.outs div{padding:26px 30px 0 0}
+.outs .n{font:700 72px/1 var(--serif)}
+.outs .l{font:22px/1.3 var(--mono);color:var(--mute);margin-top:12px}
+.outs .cost{border-left:3px solid var(--ink);padding-left:36px}
+
+/* 11 next */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);margin-top:80px;position:relative}
+.steps::before{content:"";position:absolute;left:0;right:0;top:19px;height:3px;background:var(--ink)}
+.steps div{position:relative;padding-right:40px}
+.steps .c{width:40px;height:40px;border-radius:50%;border:4px solid var(--ink);background:var(--paper);position:relative}
+.steps div:first-child .c{background:var(--ink)}
+.steps .h{font:700 40px/1.15 var(--serif);margin-top:30px}
+.steps .w{font:22px/1 var(--mono);color:var(--mute);margin-top:12px}
+.steps .b{font:26px/1.35 var(--sans);color:var(--ink2);margin-top:16px}
+.ask{position:absolute;left:120px;right:120px;bottom:130px;background:var(--ink);color:var(--paper);padding:44px 56px;display:grid;grid-template-columns:auto 1fr;gap:56px;align-items:center}
+.ask .k{font:22px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:#FF6A5C}
+.ask .t{font:700 44px/1.2 var(--serif)}
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- 1 -->
+<section class="slide dark cover">
+  <div class="case"><span>ITU HACKATHON-2026</span><span>FINTECH CASE · БАНК ЦЕНТРКРЕДИТ</span><span>КОМАНДА [НАЗВАНИЕ]</span></div>
+  <div class="brand"><div class="w">Qorgan</div><div class="kz">қорған — защита</div></div>
+  <div class="amount">850 000<span class="t">₸</span></div>
+  <p class="after">Столько Сауле, 67 лет, чуть не перевела «службе безопасности банка». <b>Qorgan остановил перевод — и не помешал ни одному обычному.</b></p>
+  <svg class="mark" viewBox="0 0 100 116" fill="none" stroke="#EEEAE1" stroke-width="5"><path d="M50 4 6 20v32c0 30 19 53 44 60 25-7 44-30 44-60V20z"/><path d="M50 4v108" stroke-dasharray="6 7"/></svg>
+  <div class="folio"><span>01</span><span>Демо и материалы — в репозитории</span></div>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <div class="kicker">Проблема</div>
+  <h2>Мошенник не взламывает банк. Он уговаривает человека.</h2>
+  <div class="call">
+    <div class="log">
+      <div class="row"><span class="ts">14:02</span><span>«Здравствуйте, служба безопасности банка…»</span></div>
+      <div class="row"><span class="ts">14:09</span><span>«На вас оформляют кредит. Деньги нужно спасти».</span></div>
+      <div class="row"><span class="ts">14:17</span><span>«Не кладите трубку. Никому не говорите».</span></div>
+      <div class="row"><span class="ts">14:27</span><span class="act">Сауле сама открывает приложение и переводит 850&nbsp;000&nbsp;₸</span></div>
+    </div>
+    <div class="bank">
+      <h3>Что видит банк</h3>
+      <p>Вход — настоящий.</p>
+      <p>Пароль — её.</p>
+      <p>Подтверждение — её.</p>
+      <div class="verdict">Обычный перевод.</div>
+    </div>
+  </div>
+  <div class="stats">
+    <div><div class="n">28 900</div><div class="l">дел об интернет-мошенничестве в 2025 — рекорд</div><div class="src">Kapital.kz, 21.08.2026</div></div>
+    <div><div class="n">№ 1</div><div class="l">схема — звонки и SMS «от имени банка»</div><div class="src">finprom.kz, январь–июль 2026</div></div>
+    <div><div class="n">98%</div><div class="l">жертв сами отдали деньги и данные</div><div class="src">МВД РК, 2024</div></div>
+  </div>
+  <div class="folio"><span>02</span><span>Источники: docs/research/RESEARCH.md</span></div>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <div class="kicker">Почему этого мало</div>
+  <h2>Переводы во время звонка уже блокируют. Мошенники взяли второй телефон.</h2>
+  <div class="phones">
+    <div>
+      <div class="ph">
+        <div class="t">приложение банка</div>
+        <div class="big">Перевод<br>850&nbsp;000&nbsp;₸</div>
+        <div class="chip">звонка нет</div>
+        <div class="chip red" style="margin-top:14px">блокировка молчит</div>
+      </div>
+      <div class="cap">телефон № 1</div>
+    </div>
+    <div>
+      <div class="ph b">
+        <div class="t">видеозвонок</div>
+        <div class="cam"></div>
+        <div class="big">«Служба безопасности»</div>
+      </div>
+      <div class="cap">телефон № 2 — схема, о которой АРРФР предупреждал в августе 2026</div>
+    </div>
+    <div class="defs">
+      <div class="d"><div class="h"><span class="strike">Блок при звонке</span></div><div class="b">видит звонок только на этом же телефоне</div></div>
+      <div class="d"><div class="h"><span class="strike">Чёрный список АФЦ</span></div><div class="b">дроп попадает туда после жалоб — когда деньги уже ушли</div></div>
+      <div class="d"><div class="h"><span class="strike">«Блок или пропуск»</span></div><div class="b">либо пропускает обман, либо злит честных клиентов</div></div>
+    </div>
+  </div>
+  <div class="folio"><span>03</span><span>Требование о блокировке — по сообщениям СМИ, ноябрь 2025</span></div>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <div class="kicker">Решение</div>
+  <h2>Qorgan смотрит не на один сигнал, а на всю картину — и отвечает соразмерно.</h2>
+  <div class="ruler">
+    <div class="pin l" style="left:0"><div class="lbl">Внуку 15&nbsp;000&nbsp;₸<small>0</small></div><div class="stem"></div></div>
+    <div class="pin alt l" style="left:0"><div class="stem"></div><div class="lbl">Аренда 200&nbsp;000&nbsp;₸<small>0 · привычный получатель</small></div></div>
+    <div class="pin" style="left:60%"><div class="lbl">Предоплата на OLX<small>60 · похож на дроп</small></div><div class="stem"></div></div>
+    <div class="pin alt" style="left:75%"><div class="stem"></div><div class="lbl red">«Служба безопасности»<small>75 · сумма ×39, дроп</small></div></div>
+    <div class="pin r" style="left:100%"><div class="lbl">Звонок + сигнал оператора<small>100</small></div><div class="stem"></div></div>
+    <div class="bar"><span style="width:30%;background:#B9C9BC"></span><span style="width:25%;background:#E3C27A"></span><span style="width:45%;background:linear-gradient(90deg,#E58A6B,var(--red))"></span></div>
+    <div class="ticks"><i style="left:0">0</i><i style="left:30%">30</i><i style="left:55%">55</i><i style="left:80%">80</i><i style="left:100%">100</i></div>
+  </div>
+  <div class="zones">
+    <div><div class="h">Пропустить</div><div class="b">Перевод уходит сразу. Ни одного лишнего экрана.</div></div>
+    <div><div class="h">Предупредить</div><div class="b">Показываем причины, клиент решает сам.</div></div>
+    <div><div class="h red">Спросить и задержать</div><div class="b">«Зачем вы переводите?» Схема или дроп — перевод ждёт специалиста, близкие узнают сразу.</div></div>
+  </div>
+  <div class="folio"><span>04</span><span>Баллы — реальные значения из демо (app/qorgan/risk.py)</span></div>
+</section>
+
+<!-- 5 -->
+<section class="slide">
+  <div class="kicker">Объяснимость</div>
+  <div class="receipt-wrap">
+    <div>
+      <h2>Каждый балл — с причиной.</h2>
+      <p class="lede">Аналитик не гадает, почему система сработала. Клиент видит те же причины простыми словами. Регулятору есть что показать.</p>
+      <p class="lede" style="margin-top:40px">Веса пока экспертные. В пилоте их калибруем на обезличенной истории инцидентов банка.</p>
+    </div>
+    <div class="receipt">
+      <div class="hd">ПЕРЕВОД T-784B · 850&nbsp;000&nbsp;₸ · 14:27</div>
+      <div class="ln"><span>Сумма ×39 от обычной</span><i class="d"></i><b>+15</b></div>
+      <div class="ln"><span>69% всех денег на счёте</span><i class="d"></i><b>+15</b></div>
+      <div class="ln"><span>43 отправителя за сутки</span><i class="d"></i><b>+15</b></div>
+      <div class="ln"><span>Новый получатель</span><i class="d"></i><b>+10</b></div>
+      <div class="ln"><span>Счёт открыт 5 дней назад</span><i class="d"></i><b>+10</b></div>
+      <div class="ln"><span>97% денег сразу выведено</span><i class="d"></i><b>+10</b></div>
+      <div class="ln tot"><span>ИТОГО</span><i class="d"></i><b>75</b></div>
+      <div class="stamp">ДРОП<small>проверка человеком</small></div>
+    </div>
+  </div>
+  <div class="folio"><span>05</span><span>Все веса: docs/RISK_MODEL.md</span></div>
+</section>
+
+<!-- 6 -->
+<section class="slide dark">
+  <div class="kicker">ИИ — там, где правила бессильны</div>
+  <h2 style="color:var(--paper)">Один вопрос: «Зачем вы переводите?»</h2>
+  <p class="quote">«Позвонил сотрудник <mark>службы безопасности банка</mark>, сказал, что на меня <mark>оформляют кредит</mark>. Надо срочно перевести деньги на <mark>безопасный счёт</mark> и <mark>никому не говорить</mark>».</p>
+  <div class="verdictline"><span>языковая модель, RU/KZ</span><span class="arrow">→</span><span class="v">СЛУЖБА БЕЗОПАСНОСТИ · 95%</span><span class="arrow">→</span><span>перевод ждёт специалиста</span></div>
+  <div class="lie">
+    <div><div class="q">А если она соврёт: «маме на лекарства»?</div><div class="a">Получатель — дроп. Перевод всё равно ждёт человека. Ответ клиента может только добавить подозрение.</div></div>
+    <div><div class="q">А если модель ошибётся?</div><div class="a">Решение о деньгах принимает код, а не модель. Выпустить задержанный перевод может только аналитик.</div></div>
+  </div>
+  <div class="folio"><span>06</span><span>Без ключа и сети работает офлайн-эвристика — демо не зависит от интернета</span></div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <div class="kicker">Как это выглядит</div>
+  <h2>Одна минута, три человека.</h2>
+  <div class="shots">
+    <div class="shot"><div class="frame dk"><img src="../../media/shot_client_held.png"></div>
+      <div class="ts">14:27:05</div><div class="who">Сауле</div><div class="what">Перевод задержан. Понятное объяснение схемы, совет положить трубку.</div></div>
+    <div class="shot"><div class="frame dk"><img src="../../media/shot_trusted_alert.png" style="object-position:center 72%"></div>
+      <div class="ts">14:27:06</div><div class="who">Айгерим, дочь</div><div class="what">«Маме, возможно, звонят мошенники». Без доступа к счёту.</div></div>
+    <div class="shot"><div class="frame"><img src="../../media/shot_analyst_case.png" style="object-position:left top"></div>
+      <div class="ts">14:28</div><div class="who">Аналитик банка</div><div class="what">Причины балла, ответ клиента, профиль дропа. Отклонить — получатель в стоп-листе.</div></div>
+  </div>
+  <div class="folio"><span>07</span><span>Живое демо — следующие 3 минуты</span></div>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <div class="kicker">Что уже есть на рынке</div>
+  <h2>Отдельные элементы уже есть. Мы собираем их в один поток.</h2>
+  <table class="mx">
+    <tr><th></th><th>Блок при звонке<br>АРРФР</th><th>Доверенный контакт<br>Kaspi</th><th>ИИ-звонок<br>инициатива НБРК</th><th>BioCatch,<br>Feedzai</th><th class="us">Qorgan</th></tr>
+    <tr><td>Ловит обход через второй телефон</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot h"></span></td><td><span class="dot h"></span></td><td class="us"><span class="dot f"></span></td></tr>
+    <tr><td>Соразмерное вмешательство</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot f"></span></td><td class="us"><span class="dot f"></span></td></tr>
+    <tr><td>Дроп до чёрного списка</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot f"></span></td><td class="us"><span class="dot f"></span></td></tr>
+    <tr><td>Понимает ответ клиента</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot f"></span></td><td><span class="dot"></span></td><td class="us"><span class="dot f"></span></td></tr>
+    <tr><td>Объясняет близким, что случилось</td><td><span class="dot"></span></td><td><span class="dot h"></span></td><td><span class="dot"></span></td><td><span class="dot"></span></td><td class="us"><span class="dot f"></span></td></tr>
+    <tr><td>Готовый кейс для аналитика и АФЦ</td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot"></span></td><td><span class="dot f"></span></td><td class="us"><span class="dot f"></span></td></tr>
+  </table>
+  <div class="legend"><span><span class="dot f"></span>&nbsp; есть</span><span><span class="dot h"></span>&nbsp; частично / голосом</span><span><span class="dot"></span>&nbsp; в открытых описаниях не найдено</span><span>по открытым источникам на 15.11.2026</span></div>
+  <div class="folio"><span>08</span><span>Т-Банк ловит мошенника в разговоре — но только на SIM своего оператора</span></div>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <div class="kicker">Что сделано</div>
+  <h2>Работающий модуль, а не макет.</h2>
+  <div class="pipe"><span>приложение / SDK</span><i></i><span>Qorgan API</span><i></i><span>балл риска</span><i></i><span class="ai">ИИ: ответ клиента</span><i></i><span>политика</span><i></i><span>аналитик · АФЦ</span></div>
+  <div class="build">
+    <div>
+      <h3 class="green">Работает</h3>
+      <ul>
+        <li><b>Сквозной сценарий</b> трёх ролей, 5 демо-случаев, сброс одной кнопкой</li>
+        <li><b>REST API</b> с OpenAPI — встраивается в платёжный поток</li>
+        <li><b>77 автотестов</b>, из них 47 — логика Qorgan</li>
+        <li><b>Без интернета:</b> офлайн-режим ИИ, ни одного CDN</li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="red">Пока симуляция</h3>
+      <ul>
+        <li>Клиенты, счета, получатели — синтетика</li>
+        <li>Сигналы телефона — переключатели в демо</li>
+        <li>Уведомления и передача в АФЦ — запись в системе</li>
+        <li>Точность ИИ измерена только для офлайн-режима: 0,84 на 63 ответах</li>
+      </ul>
+    </div>
+  </div>
+  <div class="folio"><span>09</span><span>Python · FastAPI · SQLite · LLM со строгой JSON-схемой</span></div>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <div class="kicker">Деньги</div>
+  <h2>Сколько это может сохранить — и сколько стоит.</h2>
+  <div class="formula">L × s × c × p</div>
+  <div class="vars">
+    <div><b>35 млрд ₸</b>потери в РК за год (МВД: 45 млрд в 2024, минус тренд 2026)</div>
+    <div><b>10%</b>доля BCC — допущение</div>
+    <div><b>50%</b>идёт через переводы в приложении — допущение</div>
+    <div><b>p</b>доля остановленных — цель пилота</div>
+  </div>
+  <div class="outs">
+    <div><div class="n">175</div><div class="l">млн ₸ в год при p = 10%</div></div>
+    <div><div class="n">437</div><div class="l">млн ₸ при p = 25%</div></div>
+    <div><div class="n">700</div><div class="l">млн ₸ при p = 40%</div></div>
+    <div class="cost"><div class="n green">43&nbsp;000&nbsp;₸</div><div class="l">в месяц на ИИ: модель спрашивают только про подозрительные переводы (1%)</div></div>
+  </div>
+  <div class="folio"><span>10</span><span>Это оценка, не измерение. Формулы: docs/submission/ECONOMICS.md</span></div>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <div class="kicker">Следующий шаг</div>
+  <h2>Проверить на данных BCC — без риска для клиентов.</h2>
+  <div class="steps">
+    <div><div class="c"></div><div class="h">MVP</div><div class="w">сейчас</div><div class="b">сценарий работает, тесты, оценка ИИ</div></div>
+    <div><div class="c"></div><div class="h">Офлайн-прогон</div><div class="w">1–2 месяца</div><div class="b">обезличенные инциденты BCC и АФЦ, калибровка весов</div></div>
+    <div><div class="c"></div><div class="h">Тень</div><div class="w">1 месяц</div><div class="b">оцениваем живые переводы, но не вмешиваемся</div></div>
+    <div><div class="c"></div><div class="h">Пилот</div><div class="w">2–3 месяца</div><div class="b">5–10% клиентов, контрольная группа, трение ≤ 1%</div></div>
+  </div>
+  <div class="ask"><div class="k">Просим</div><div class="t">Обезличенную историю инцидентов и одного ментора из антифрода BCC.</div></div>
+  <div class="folio"><span>11</span><span>Qorgan · қорған — защита</span></div>
+</section>
+
+</div>
+<script>
+// Presentation mode when opened in a browser (not when printing / rendering).
+(function () {
+  if (location.search.includes('static')) return;
+  const slides = [...document.querySelectorAll('.slide')];
+  let i = Math.max(0, Math.min(slides.length - 1, (parseInt(location.hash.slice(1)) || 1) - 1));
+  document.documentElement.classList.add('present');
+  function fit() {
+    const k = Math.min(innerWidth / 1920, innerHeight / 1080);
+    slides.forEach(s => s.style.transform = `translate(-50%,-50%) scale(${k})`);
+  }
+  function show(n) { i = Math.max(0, Math.min(slides.length - 1, n)); slides.forEach((s, j) => s.classList.toggle('on', j === i)); history.replaceState(null, '', '#' + (i + 1)); }
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' '].includes(e.key)) show(i + 1);
+    if (['ArrowLeft', 'PageUp'].includes(e.key)) show(i - 1);
+    if (e.key === 'f') document.documentElement.requestFullscreen?.();
+  });
+  addEventListener('click', e => show(i + (e.clientX > innerWidth / 3 ? 1 : -1)));
+  fit(); show(i);
+})();
+</script>
+</body>
+</html>

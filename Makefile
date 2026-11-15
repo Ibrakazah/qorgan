@@ -4,14 +4,12 @@ PYTHON  ?= python3
 VENV    ?= .venv
 BIN     := $(VENV)/bin
 PORT    ?= 8000
-TASK    ?= moderation
-DATASET ?= evals/datasets/moderation_sample.jsonl
-CSV     ?= ml/sample_telemetry.csv
-TARGET  ?= is_bot
+TASK    ?= scam_script
+DATASET ?= evals/datasets/scam_script.jsonl
 ARGS    ?=
 
 .DEFAULT_GOAL := help
-.PHONY: help install demo record deck dev test lint typecheck check eval ml sample-data smoke docker clean
+.PHONY: help install demo record deck dev test lint typecheck check eval smoke docker clean
 
 help: ## list targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-12s %s\n", $$1, $$2}'
@@ -31,7 +29,8 @@ demo: ## run Qorgan for the live demo on PORT (no auto-reload): http://localhost
 record: ## record the 3-min backup video + screenshots (needs `make demo` running, Playwright)
 	python3 scripts/record_demo.py --base http://localhost:$(PORT)
 
-deck: ## build the editable pitch deck docs/submission/Qorgan_pitch.pptx
+deck: ## render docs/submission/deck/index.html → Qorgan_pitch.pdf + .pptx (needs Playwright)
+	python3 scripts/render_deck.py
 	$(BIN)/python scripts/build_deck.py
 
 dev: ## run the API with auto-reload on PORT (default 8000): / playground, /docs OpenAPI
@@ -52,11 +51,7 @@ check: lint typecheck test ## everything CI should run
 eval: ## evaluate TASK on DATASET, e.g. make eval ARGS="--limit 10 --no-cache"
 	$(BIN)/python -m evals.run_eval --task $(TASK) --dataset $(DATASET) $(ARGS)
 
-ml: ## tabular baseline, e.g. make ml CSV=data/case.csv TARGET=churned ARGS="--drop user_id"
-	$(BIN)/python -m ml.baseline --csv $(CSV) --target $(TARGET) $(ARGS)
 
-sample-data: ## regenerate the synthetic telemetry CSV
-	$(BIN)/python -m ml.make_sample_telemetry --out $(CSV)
 
 smoke: ## ONE real LLM call (needs ANTHROPIC_API_KEY or OPENAI_COMPAT_API_KEY in .env)
 	$(BIN)/python -m scripts.smoke
@@ -66,4 +61,4 @@ docker: ## build and run the API in Docker on :8000
 
 clean: ## remove caches and generated reports (keeps example.md files)
 	rm -rf .cache .pytest_cache .mypy_cache .ruff_cache
-	find evals/reports ml/reports -type f ! -name example.md -delete
+	find evals/reports -type f ! -name example.md -delete

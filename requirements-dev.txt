@@ -1,6 +1,5 @@
-# Everything needed for local development, tests, evals and the ML baseline.
+# Everything needed for local development, tests, evals and building the pitch deck.
 -r requirements.txt
--r requirements-ml.txt
 httpx2==2.16.0  # imported by tests to mock the Anthropic SDK transport
 mypy==2.4.1
 pytest==9.2.0

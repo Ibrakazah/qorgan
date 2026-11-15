@@ -73,7 +73,9 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .card.warn h3{color:var(--warn)} .card.danger h3{color:var(--danger)} .card.ok h3{color:var(--ok)}
 .card ul{margin:0;padding-left:18px}
 .center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;flex:1}
-.big-icon{font-size:52px;line-height:1}
+.ico{width:56px;height:56px;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.ico.ok{stroke:var(--ok)} .ico.bad{stroke:var(--danger)}
+.mark{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:8px;vertical-align:middle;background:currentColor}
 .spinner{width:36px;height:36px;border:4px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .row{display:flex;gap:8px}
@@ -196,10 +198,17 @@ const $ = (s) => document.querySelector(s);
 const fmt = (n) => Math.round(n).toLocaleString('ru-RU').replace(/,/g, ' ') + ' ₸';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time = (iso) => new Date(iso).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
+
+const ICON = {
+  ok: '<svg viewBox="0 0 48 48" class="ico ok"><circle cx="24" cy="24" r="21"/><path d="m14 25 7 7 13-15"/></svg>',
+  shield: '<svg viewBox="0 0 48 48" class="ico ok"><path d="M24 4 7 10v12c0 11 7.3 19.5 17 22 9.7-2.5 17-11 17-22V10z"/><path d="m16 24 6 6 10-12"/></svg>',
+  pause: '<svg viewBox="0 0 48 48" class="ico bad"><circle cx="24" cy="24" r="21"/><path d="M19 15v18M29 15v18"/></svg>',
+  err: '<svg viewBox="0 0 48 48" class="ico bad"><circle cx="24" cy="24" r="21"/><path d="M24 13v14M24 33v1"/></svg>',
+};
 const STATUS = {executed:'выполнен', awaiting_confirmation:'ждёт подтверждения', awaiting_answer:'проверка', held:'задержан', cancelled_by_client:'отменён клиентом', rejected:'отклонён'};
 const GROUP = {session:'сессия', amount:'сумма', recipient:'получатель', history:'история'};
 
-const S = {state:null, scenario:null, transfer:null, view:'form', busy:false, selected:null, cases:[], alerts:[], metrics:null};
+const S = {balances:{}, state:null, scenario:null, transfer:null, view:'form', busy:false, selected:null, cases:[], alerts:[], metrics:null};
 
 async function api(path, opts = {}) {
   const res = await fetch(path, {headers: {'Content-Type': 'application/json'}, ...opts});
@@ -247,7 +256,7 @@ function renderClient() {
     const sc = S.scenario;
     el.innerHTML = `
       <h2>Перевод</h2>
-      <div class="acct"><div class="muted">Счёт ${esc(c.name.split(' ')[0])}</div><b>${fmt(c.balance)}</b></div>
+      <div class="acct"><div class="muted">Счёт ${esc(c.name.split(' ')[0])}</div><b>${fmt(S.balances[c.id] ?? c.balance)}</b></div>
       <label class="field">Получатель
         <select id="fRecipient">${S.state.recipients.map(r => `<option value="${r.id}" ${sc?.recipient_id === r.id ? 'selected' : ''}>${esc(r.display_name)} · ${esc(r.account_masked)}</option>`).join('')}</select></label>
       <label class="field">Сумма, ₸<input id="fAmount" type="number" min="1" inputmode="numeric" value="${sc?.amount ?? 10000}"></label>
@@ -259,19 +268,19 @@ function renderClient() {
   const a = t.assessment, top = a.reasons.filter(r => r.points > 0).slice(0, 3);
   const reasonsList = top.length ? `<ul>${top.map(r => `<li>${esc(r.text)}</li>`).join('')}</ul>` : '';
   if (t.status === 'executed') {
-    el.innerHTML = `<div class="center"><div class="big-icon">✅</div><h2>Перевод выполнен</h2>
+    el.innerHTML = `<div class="center">${ICON.ok}<h2>Перевод выполнен</h2>
       <div>${fmt(t.amount)} → ${esc(t.recipient_name)}</div>
       <div class="muted">${t.analyst ? 'Аналитик проверил и выпустил перевод.' : a.level === 'allow' ? 'Обычный перевод — без лишних вопросов.' : 'Вы подтвердили перевод после предупреждения.'}</div>
       <button class="btn ghost" id="newBtn">Новый перевод</button></div>`;
   } else if (t.status === 'awaiting_confirmation') {
     const ch = t.check;
-    el.innerHTML = `<div class="card warn"><h3>⚠️ Проверьте перевод</h3>
+    el.innerHTML = `<div class="card warn"><h3><span class="mark"></span>Проверьте перевод</h3>
       <div>${fmt(t.amount)} → ${esc(t.recipient_name)}</div>${reasonsList}
       ${ch ? `<div>${esc(ch.advice)}</div>` : '<div>Если вас кто-то торопит или диктует действия — остановитесь.</div>'}</div>
       <div class="row"><button class="btn" id="cancelBtn">Отменить</button><button class="btn primary" id="confirmBtn">Всё равно перевести</button></div>`;
     $('#confirmBtn').onclick = () => act(`/api/transfers/${t.id}/confirm`);
   } else if (t.status === 'awaiting_answer') {
-    el.innerHTML = `<div class="card danger"><h3>🛑 Остановитесь на минуту</h3>
+    el.innerHTML = `<div class="card danger"><h3><span class="mark"></span>Остановитесь на минуту</h3>
       <div>Этот перевод похож на мошенническую схему:</div>${reasonsList}
       <div><b>Сотрудники банка и полиции никогда не просят переводить деньги.</b></div></div>
       <label class="field">Расскажите своими словами: зачем вы переводите эти деньги и кто вас попросил?
@@ -282,16 +291,16 @@ function renderClient() {
     $('#answerBtn').onclick = submitAnswer;
   } else if (t.status === 'held') {
     const ch = t.check, c2 = client();
-    el.innerHTML = `<div class="card danger"><h3>⏸ Перевод задержан на 60 минут</h3>
+    el.innerHTML = `<div class="card danger"><h3><span class="mark"></span>Перевод задержан</h3>
       <div>${fmt(t.amount)} → ${esc(t.recipient_name)}</div>
-      ${ch && ch.verdict.script !== 'none' ? `<div>Похоже на схему: <b>${esc(ch.script_title)}</b></div><div>${esc(ch.advice)}</div>` : '<div>Перевод проверит специалист банка.</div>'}</div>
-      ${c2.trusted_contact ? `<div class="card info"><div>📲 Мы сообщили вашему доверенному лицу: <b>${esc(c2.trusted_contact.name)}</b> (${esc(c2.trusted_contact.relation)}).</div></div>` : ''}
-      <div class="card info"><div>📞 Положите трубку. Специалист банка перезвонит вам с официального номера.</div></div>
+      ${ch && ch.verdict.script !== 'none' ? `<div>Похоже на схему: <b>${esc(ch.script_title)}</b></div><div>${esc(ch.advice)}</div>` : t.assessment.mule_pattern ? '<div>Счёт получателя похож на счёт-«дроп»: на него за сутки переводят десятки незнакомых людей. Перевод проверит специалист банка.</div>' : '<div>Перевод проверит специалист банка.</div>'}</div>
+      ${c2.trusted_contact ? `<div class="card info"><div>Мы сообщили вашему доверенному лицу: <b>${esc(c2.trusted_contact.name)}</b> (${esc(c2.trusted_contact.relation)}).</div></div>` : ''}
+      <div class="card info"><div><b>Положите трубку.</b> Специалист банка перезвонит с номера, указанного на вашей карте. По закону банк может держать перевод до 5 рабочих дней.</div></div>
       <button class="btn block" id="cancelBtn">Отменить перевод</button>`;
   } else if (t.status === 'cancelled_by_client') {
-    el.innerHTML = `<div class="center"><div class="big-icon">🛡️</div><h2>Перевод отменён</h2><div>${fmt(t.amount)} остались на вашем счёте.</div><button class="btn ghost" id="newBtn">Новый перевод</button></div>`;
+    el.innerHTML = `<div class="center">${ICON.shield}<h2>Перевод отменён</h2><div>${fmt(t.amount)} остались на вашем счёте.</div><button class="btn ghost" id="newBtn">Новый перевод</button></div>`;
   } else if (t.status === 'rejected') {
-    el.innerHTML = `<div class="center"><div class="big-icon">🛡️</div><h2>Деньги остались у вас</h2>
+    el.innerHTML = `<div class="center">${ICON.shield}<h2>Деньги остались у вас</h2>
       <div>Банк отклонил перевод ${fmt(t.amount)}: получатель — мошеннический счёт.</div><div class="muted">Счёт получателя заблокирован.</div>
       <button class="btn ghost" id="newBtn">Новый перевод</button></div>`;
   }
@@ -301,7 +310,8 @@ function renderClient() {
 async function submitTransfer() {
   const amount = +$('#fAmount').value;
   if (!amount || amount <= 0) { toast('Введите сумму больше нуля'); return; }
-  if (amount > client().balance) { toast('Недостаточно средств: на счёте ' + fmt(client().balance)); return; }
+  const bal = S.balances[client().id] ?? client().balance;
+  if (amount > bal) { toast('Недостаточно средств: доступно ' + fmt(bal)); return; }
   const body = {client_id: client().id, recipient_id: $('#fRecipient').value, amount, purpose: $('#fPurpose').value, session: session()};
   S.busy = true; renderClient();
   try { S.transfer = await api('/api/transfers', {method: 'POST', body: JSON.stringify(body)}); S.view = 'result'; }
@@ -333,12 +343,12 @@ function renderTrusted() {
   el.innerHTML = `<h2>Уведомления</h2><div class="sim">Доверенное лицо назначено клиентом заранее, с его согласия. Получает только уведомления о задержанных переводах — без доступа к счёту.</div>` +
     (list.length ? list.map(a => `
       <div class="push ${a.status === 'new' ? 'new' : ''}">
-        <div class="head"><span>🛡️ Qorgan · банк</span><span>${time(a.created_at)}</span></div>
+        <div class="head"><span><span class="mark" style="color:var(--brand)"></span>Банк · Qorgan</span><span>${time(a.created_at)}</span></div>
         <div><b>${esc(a.client_name.split(' ')[0])}, возможно, общается с мошенниками</b></div>
         <div>Задержан перевод ${fmt(a.amount)} → ${esc(a.recipient_name)}${a.on_call ? ' (во время телефонного звонка)' : ''}</div>
         ${a.script_title ? `<div class="muted">Похоже на: ${esc(a.script_title)}</div>` : ''}
         ${a.status === 'new' ? `<div class="row"><button class="btn danger small" data-alert="${a.id}" data-r="scam">Это мошенники</button><button class="btn small" data-alert="${a.id}" data-r="ok">Я в курсе, всё нормально</button></div>`
-          : `<div class="muted">Ваш ответ: ${a.status === 'scam' ? '«это мошенники» — банк не выпустит перевод без проверки' : '«всё нормально» — передано специалисту'}</div>`}
+          : `<div class="muted">${a.status === 'closed' ? 'Вопрос решён: ' + esc(a.closed_reason || 'перевод проверен') : 'Ваш ответ: ' + (a.status === 'scam' ? '«это мошенники» — банк не выпустит перевод без проверки' : '«всё нормально» — передано специалисту')}</div>`}
       </div>`).join('') : `<div class="empty">Уведомлений нет.<br>Они появятся, если банк задержит подозрительный перевод ${esc(c.name.split(' ')[0])}.</div>`);
 }
 
@@ -393,7 +403,8 @@ function renderDetail() {
         ${r ? `<div class="kv"><span>Возраст счёта</span><b class="${r.account_age_days < 30 ? 'flag' : ''}">${r.account_age_days} дн.</b></div>
           <div class="kv"><span>Разных отправителей за 24 ч</span><b class="${r.unique_senders_24h >= 10 ? 'flag' : ''}">${r.unique_senders_24h}</b></div>
           <div class="kv"><span>Вывод средств за 24 ч</span><b class="${r.cash_out_ratio_24h >= 0.8 ? 'flag' : ''}">${Math.round(r.cash_out_ratio_24h * 100)}%</b></div>
-          <div class="kv"><span>В базе мошеннических счетов</span><b>${r.in_antifraud_db ? 'да' : 'нет'}</b></div>
+          <div class="kv"><span>В стоп-листе / базе АФЦ</span><b class="${(S.stoplist||[]).includes(r.id) || r.in_antifraud_db ? 'flag' : ''}">${(S.stoplist||[]).includes(r.id) ? 'да, стоп-лист банка' : r.in_antifraud_db ? 'да' : 'нет'}</b></div>
+          ${a.mule_pattern ? '<div class="flag">Похож на дроп: задержка при любом ответе клиента</div>' : ''}
           <div class="sim">В проде — данные core banking и обмена с Антифрод-центром НБРК. Здесь — симулятор.</div>` : ''}
         <div class="kv"><span>Доверенное лицо</span><b class="${c.trusted_response === 'scam' ? 'flag' : ''}">${c.trusted_response === 'scam' ? 'считает, что мошенники' : c.trusted_response === 'ok' ? 'подтверждает перевод' : c.alert_id ? 'ещё не ответило' : 'нет'}</b></div>
       </div>
@@ -424,8 +435,10 @@ $('#resetBtn').onclick = async () => {
 
 async function refresh() {
   try {
-    const [cases, alerts, metrics] = await Promise.all([api('/api/cases'), api('/api/alerts'), api('/api/metrics')]);
-    S.cases = cases; S.alerts = alerts; S.metrics = metrics;
+    const [cases, alerts, metrics, balances, stop] = await Promise.all([api('/api/cases'), api('/api/alerts'), api('/api/metrics'), api('/api/balances'), api('/api/stoplist')]);
+    S.cases = cases; S.alerts = alerts; S.metrics = metrics; S.stoplist = stop;
+    const balChanged = JSON.stringify(balances) !== JSON.stringify(S.balances); S.balances = balances;
+    if (balChanged && (!S.transfer || S.view === 'form') && !document.activeElement?.closest?.('#clientApp')) renderClient();
     if (!S.selected || !cases.find(c => c.id === S.selected)) S.selected = cases[0]?.id ?? null;
     if (S.transfer) { const fresh = cases.find(c => c.id === S.transfer.id); if (fresh && fresh.status !== S.transfer.status) { S.transfer = fresh; renderClient(); } }
     renderKpis(); renderQueue(); renderDetail(); renderTrusted();
@@ -445,7 +458,7 @@ function tick() { const t = new Date().toLocaleTimeString('ru-RU', {hour: '2-dig
     await refresh();
     setInterval(refresh, 2500); tick(); setInterval(tick, 15000);
   } catch (e) {
-    $('#clientApp').innerHTML = `<div class="center"><div class="big-icon">⚠️</div><div>Не удалось загрузить демо: ${esc(e.message)}</div><button class="btn" onclick="location.reload()">Повторить</button></div>`;
+    $('#clientApp').innerHTML = `<div class="center">${ICON.err}<div>Не удалось загрузить демо: ${esc(e.message)}</div><button class="btn" onclick="location.reload()">Повторить</button></div>`;
   }
 })();
 </script>
