@@ -318,7 +318,7 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
   <div class="ruler">
     <div class="pin l" style="left:0"><div class="lbl">Внуку 15&nbsp;000&nbsp;₸<small>0</small></div><div class="stem"></div></div>
     <div class="pin alt l" style="left:0"><div class="stem"></div><div class="lbl">Аренда 200&nbsp;000&nbsp;₸<small>0 · привычный получатель</small></div></div>
-    <div class="pin" style="left:60%"><div class="lbl">Предоплата на OLX<small>60 · похож на дроп</small></div><div class="stem"></div></div>
+    <div class="pin" style="left:50%"><div class="lbl">Предоплата на OLX<small>50 · «серый» список АФЦ</small></div><div class="stem"></div></div>
     <div class="pin alt" style="left:75%"><div class="stem"></div><div class="lbl red">«Служба безопасности»<small>75 · сумма ×39, дроп</small></div></div>
     <div class="pin r" style="left:100%"><div class="lbl">Звонок + сигнал оператора<small>100</small></div><div class="stem"></div></div>
     <div class="bar"><span style="width:30%;background:#B9C9BC"></span><span style="width:25%;background:#E3C27A"></span><span style="width:45%;background:linear-gradient(90deg,#E58A6B,var(--red))"></span></div>
@@ -361,9 +361,9 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
   <div class="kicker">ИИ — там, где правила бессильны</div>
   <h2 style="color:var(--paper)">Один вопрос: «Зачем вы переводите?»</h2>
   <p class="quote">«Позвонил сотрудник <mark>службы безопасности банка</mark>, сказал, что на меня <mark>оформляют кредит</mark>. Надо срочно перевести деньги на <mark>безопасный счёт</mark> и <mark>никому не говорить</mark>».</p>
-  <div class="verdictline"><span>офлайн-классификатор демо</span><span class="arrow">→</span><span class="v">СЛУЖБА БЕЗОПАСНОСТИ · уверенность 98%</span><span class="arrow">→</span><span>перевод ждёт специалиста</span></div>
+  <div class="verdictline"><span>классификатор демо</span><span class="arrow">→</span><span class="v">СЛУЖБА БЕЗОПАСНОСТИ · 98%</span><span class="arrow">→</span><span>перевод ждёт специалиста</span></div>
   <div class="lie">
-    <div><div class="q">А если она соврёт: «маме на лекарства»?</div><div class="a">Получатель — дроп. Перевод всё равно ждёт человека. Ответ клиента может только добавить подозрение.</div></div>
+    <div><div class="q">А если она соврёт: «маме на лекарства»?</div><div class="a">Получатель — дроп, или идёт звонок с незнакомого номера — перевод всё равно ждёт человека. Ответ может только добавить подозрение.</div></div>
     <div><div class="q">А если модель ошибётся?</div><div class="a">Решение о деньгах принимает код, а не модель. Выпустить задержанный перевод может только аналитик.</div></div>
   </div>
   <div class="folio"><span>06</span><span>В демо работает офлайн-классификатор. Режим с языковой моделью написан, но не измерен: нужен ключ API</span></div>
@@ -383,13 +383,13 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
       <div class="src" style="margin-top:18px">По открытым источникам на 15.11.2026: решения британского омбудсмена по Revolut, thepaypers.com, nur.kz</div>
     </div>
     <div class="diff">
-      <h3>Чего нет ни у кого из них</h3>
-      <div class="df"><span class="n">1</span><div><b>Ответ клиента не может снять тревогу.</b> Revolut доверяет ответам клиента — а жертвам диктуют, что отвечать: такие случаи разбирает британский финансовый омбудсмен. У нас ответ только добавляет подозрение, а перевод на дроп ждёт человека при любом ответе.</div></div>
-      <div class="df"><span class="n">2</span><div><b>Закрываем обход правила РК вторым телефоном.</b> Срабатываем без звонка на устройстве: по получателю, сумме и ответу. Публичных решений этой дыры мы не нашли.</div></div>
-      <div class="df"><span class="n">3</span><div><b>Русский, казахский и их смесь.</b> Схемы под РК («Нацбанк», «КНБ», OLX), а у дочери — кнопка «позвонить маме на её номер»: звонок рвёт разговор с мошенником на втором телефоне.</div></div>
+      <h3>Наши отличия</h3>
+      <div class="df"><span class="n">1</span><div><b>Ответ клиента не может снять тревогу.</b> Revolut останавливает рискованный платёж и уточняет цель, но ответ клиента влияет на решение — а жертвам диктуют, что отвечать (такие случаи разбирает британский финансовый омбудсмен). У нас при дропе или звонке с незнакомого номера перевод ждёт человека при любом ответе.</div></div>
+      <div class="df"><span class="n">2</span><div><b>Срабатываем без сигнала звонка.</b> Когда мошенник на втором телефоне, мы смотрим на сумму, на счёт получателя (по клиентам BCC), на «серый» список АФЦ и на ответ клиента. Публичных решений этой казахстанской дыры мы не нашли.</div></div>
+      <div class="df"><span class="n">3</span><div><b>Сделано под Казахстан.</b> Ответы на русском, казахском и их смеси, схемы «Нацбанк», «КНБ», OLX. А у доверенного лица — кнопка «позвонить маме на её номер»: звонок рвёт разговор с мошенником на втором телефоне.</div></div>
     </div>
   </div>
-  <div class="folio"><span>07</span><span>Доверенный контакт как идею мы не присваиваем: в РФ и UK он уже есть, в РК — пока нет</span></div>
+  <div class="folio"><span>07</span><span>Доверенный контакт как идею мы не присваиваем: он уже есть у Kaspi, Monzo и Сбера</span></div>
 </section>
 
 <!-- 9 -->
@@ -408,7 +408,7 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
       <ul>
         <li><b>Сквозной сценарий</b> трёх ролей, 9 демо-случаев</li>
         <li><b>REST API</b> — встраивается в платёжный поток банка</li>
-        <li><b>103 автотеста</b>, демо работает без интернета</li>
+        <li><b>104 автотеста</b>, демо работает без интернета</li>
       </ul>
     </div>
     <div>
@@ -426,7 +426,7 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
 <!-- 10 -->
 <section class="slide">
   <div class="kicker">Деньги и нагрузка</div>
-  <h2>До 700 млн ₸ в год сохранённых денег клиентов BCC — если пилот подтвердит.</h2>
+  <h2>175–700 млн ₸ в год сохранённых денег клиентов BCC — это цель пилота.</h2>
   <div class="chain">
     <div><b>35 млрд ₸</b><span>потери от мошенничества в РК за год</span></div><i>×</i>
     <div><b>10%</b><span>приходится на клиентов BCC</span></div><i>×</i>
@@ -439,7 +439,7 @@ table.mx{width:100%;border-collapse:collapse;margin-top:40px;font:26px/1.25 var(
     <div class="cost"><div class="n green">43&nbsp;000&nbsp;₸</div><div class="l">в месяц стоит ИИ: спрашиваем только про ~1% переводов</div></div>
     <div class="cost"><div class="n">≈&nbsp;7</div><div class="l">полных ставок аналитиков: ~1&nbsp;000 задержек в день × 3&nbsp;минуты на кейс</div></div>
   </div>
-  <div class="folio"><span>09</span><span>Все числа, кроме потерь (МВД: 45 млрд ₸ в 2024), — наши допущения и цели. Расчёт — в материалах проекта</span></div>
+  <div class="folio"><span>09</span><span>35 млрд ₸ — допущение: 45 млрд ₸ в 2024 по МВД минус тренд 2026. Остальные числа — тоже допущения и цели</span></div>
 </section>
 
 <!-- 11 -->
