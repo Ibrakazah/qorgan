@@ -37,12 +37,12 @@ Python, FastAPI, REST API (OpenAPI), SQLite, scikit-learn (классифика�
 
 **Репозиторий проекта**
 ```
-[ссылка после публикации на GitHub]
+https://github.com/Ibrakazah/qorgan
 ```
 
 **Презентация и материалы проекта**
 ```
-[ссылка на Qorgan_pitch.pdf в репозитории или на Google Drive]
+https://github.com/Ibrakazah/qorgan/blob/main/docs/submission/Qorgan_pitch.pdf
 ```
 В репозитории лежат: `docs/submission/Qorgan_pitch.pdf`, `Qorgan_pitch.pptx`, демо-видео `docs/media/qorgan_demo.mp4`, описание `docs/submission/DESCRIPTION.md`.
 
